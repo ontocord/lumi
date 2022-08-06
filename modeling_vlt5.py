@@ -82,9 +82,6 @@ def decode_image(img, frcnn,  image_preprocessor, max_detections=36, do_visualiz
 
   return output_dict
 
-class VLT5BaseModelOutputWithPastAndCrossAttentions(BaseModelOutputWithPastAndCrossAttentions):
-    vis_inputs = None
-    
 class VisualEmbedding(nn.Module):
     def __init__(self, config, obj_order_embedding):
         super().__init__()
@@ -419,14 +416,15 @@ class JointEncoder(T5Stack):
                 ]
                 if v is not None
             )
-        return VLT5BaseModelOutputWithPastAndCrossAttentions(
+        ret = BaseModelOutputWithPastAndCrossAttentions(
             last_hidden_state=hidden_states,
             past_key_values=present_key_value_states,
             hidden_states=all_hidden_states,
             attentions=all_attentions,
-            cross_attentions=all_cross_attentions,
-            vis_inputs=vis_inputs,
+            cross_attentions=all_cross_attentions
         )
+        ret.vis_inputs=vis_inputs # hack
+        return ret
 
 
 class VLT5(T5ForConditionalGeneration):
@@ -570,14 +568,14 @@ class VLT5(T5ForConditionalGeneration):
             )
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             vis_inputs = encoder_outputs[-1]
-            encoder_outputs = VLT5BaseModelOutputWithPastAndCrossAttentions(
+            encoder_outputs = BaseModelOutput(
                 last_hidden_state=encoder_outputs[0],
                 hidden_states=encoder_outputs[1] if len(
                     encoder_outputs) > 1 else None,
                 attentions=encoder_outputs[2] if len(
-                    encoder_outputs) > 2 else None,
-                vis_inputs = vis_inputs
+                    encoder_outputs) > 2 else None
             )
+            encoder_outputs.vis_inputs = vis_inputs
 
         hidden_states = encoder_outputs[0]
 
