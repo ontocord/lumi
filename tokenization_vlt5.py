@@ -28,7 +28,7 @@ class VLT5Tokenizer(T5Tokenizer):
             additional_special_tokens = ["<extra_id_{}>".format(i) for i in range(extra_ids)]
         elif extra_ids > 0 and additional_special_tokens is not None:
             # Check that we have the right number of extra_id special tokens
-            extra_tokens = len(set(filter(lambda x: bool("extra_id" in x), additional_special_tokens)))
+            extra_tokens = len(set(filter(lambda x: bool("<extra_id" in x), additional_special_tokens)))
             if extra_tokens != extra_ids:
                 raise ValueError(
                     f"Both extra_ids ({extra_ids}) and additional_special_tokens ({additional_special_tokens}) are provided to T5Tokenizer. "
@@ -150,7 +150,7 @@ class VLT5TokenizerFast(T5TokenizerFast):
             additional_special_tokens = ["<extra_id_{}>".format(i) for i in range(extra_ids)]
         elif extra_ids > 0 and additional_special_tokens is not None:
             # Check that we have the right number of extra_id special tokens
-            extra_tokens = len(set(filter(lambda x: bool("extra_id" in x), additional_special_tokens)))
+            extra_tokens = len(set(filter(lambda x: bool("<extra_id" in x), additional_special_tokens)))
             if extra_tokens != extra_ids:
                 raise ValueError(
                     f"Both extra_ids ({extra_ids}) and additional_special_tokens ({additional_special_tokens}) are provided to T5Tokenizer. "
