@@ -511,7 +511,7 @@ class DalleConfig(PretrainedConfig):
             **kwargs,
         )
 
-class MinDalle (PreTrainedModel):
+class DalleModel (PreTrainedModel):
     config_class = DalleConfig
     base_model_prefix = "model"
     
