@@ -64,8 +64,8 @@ from jmin_vlt5.mmt_model import VLT5MMT
 from jmin_vlt5.vcr_model import VLT5VCR
 
 
-from .modeling_t5 import VLT5
-from .modeling_dalle import *
+from lumi.modeling_vlt5 import VLT5
+from lumi.modeling_dalle import *
 
 proj_dir = Path(__file__).resolve().parent.parent
 
