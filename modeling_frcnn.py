@@ -1664,6 +1664,11 @@ class GeneralizedRCNN(nn.Module):
         self.proposal_generator = RPN(cfg, self.backbone.output_shape())
         self.roi_heads = Res5ROIHeads(cfg, self.backbone.output_shape())
         self.roi_outputs = ROIOutputs(cfg)
+        # in eval and no training mode by default
+        self.eval()
+        for param in self.parameters():
+          param.requires_grad_(False)
+        return model
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -1824,7 +1829,8 @@ class GeneralizedRCNN(nn.Module):
             )
         # Set model in evaluation mode to deactivate DropOut modules by default
         model.eval()
-
+        for param in model.parameters():
+          param.requires_grad_(False)
         return model
 
     def forward(
@@ -1846,6 +1852,8 @@ class GeneralizedRCNN(nn.Module):
          if self.training:
              print ("warning. you are attempting to train the frcnn model which is not supportd. switching to eval mode")
              self.eval()
+             for param in self.parameters():
+               param.requires_grad_(False)
          #print (image_shapes.dtype)
          return self.inference(
              images=images.to(dtype=data.dtype, device=data.device),
