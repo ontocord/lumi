@@ -1,7 +1,6 @@
 
 #from https://github.com/j-min/VL-T5/blob/main/VL-T5/src/multitask.py which is under the MIT License
-from trainer_base import TrainerBase
-import torch.backends.cudnn as cudnn
+
 import torch.multiprocessing as mp
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
@@ -18,14 +17,24 @@ import logging
 import shutil
 from pprint import pprint, pformat
 from copy import deepcopy
-
+import torch.backends.cudnn as cudnn
+import sys
 #assumes you have done this:
 #git clone https://github.com/j-min/VL-T5
 #cp -rf https://github.com/j-min/VL-T5/VL-T5/src ./jmin_vlt5
+import os, sys
+try:
+  sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           os.path.pardir)))
+except:
+  sys.path.append(os.path.abspath(os.path.join("./",
+                                           os.path.pardir)))
 
-from jimin_vlt5.param import parse_args
 
+sys.path.append('./jmin_vlt5')
 
+from jmin_vlt5.trainer_base import TrainerBase
+from jmin_vlt5.param import parse_args
 import jmin_vlt5.vqa
 import jmin_vlt5.vqa_data
 import jmin_vlt5.gqa
