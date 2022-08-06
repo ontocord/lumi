@@ -43,6 +43,19 @@ from .modeling_frcnn import *
 
 logger = logging.get_logger(__name__)
 
+#function to generate some text from the model, given a prompt and an image 
+def image2text(model, tokenizer, prompt, img, **kwargs):
+    param = next(model.parameters()).data
+    output_dict = decode_image(asarray(img),  model.frcnn, model.image_preprocessor)
+    output_dict['roi_features'] = output_dict['roi_features'].to(dtype=param.dtype, device=param.device)
+    output_dict['normalized_boxes'] = output_dict ['normalized_boxes'].to(dtype=param.dtype, device=param.device)
+    for key, val in output_dict.items():
+      kwargs[key] = val
+    kwargs['vis_inputs'] = (output_dict['roi_features'], output_dict ['normalized_boxes'])
+    input_ids = tokenizer(prompt, return_tensors='pt', padding=True).input_ids.to(param.device)
+    output = model.generate(input_ids=input_ids, **kwargs)
+    return output, tokenizer.batch_decode(output, skip_special_tokens=True)
+
 
 # for visualizing output
 def showarray(a, fmt='jpeg'):
