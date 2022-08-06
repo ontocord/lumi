@@ -1842,18 +1842,19 @@ class GeneralizedRCNN(nn.Module):
             "max_detections"}, pad_value (int), location = {"cuda", "cpu"}
         """
         data = next(self.parameters()).data
-
-        if self.training:
-            raise NotImplementedError()
-        #print (image_shapes.dtype)
-        return self.inference(
-            images=images.to(dtype=data.dtype, device=data.device),
-            image_shapes=image_shapes.to(device=data.device),
-            gt_boxes=gt_boxes.to(dtype=data.dtype, device=data.device) if gt_boxes is not None else None,
-            proposals=proposals.to(dtype=data.dtype, device=data.device) if proposals is not None else None,
-            scales_yx=scales_yx.to(dtype=data.dtype, device=data.device) if scales_yx is not None else None,
-            **kwargs,
-        )
+        with torch.no_grad():
+         if self.training:
+             print ("warning. you are attempting to train the frcnn model which is not supportd. switching to eval mode")
+             self.eval()
+         #print (image_shapes.dtype)
+         return self.inference(
+             images=images.to(dtype=data.dtype, device=data.device),
+             image_shapes=image_shapes.to(device=data.device),
+             gt_boxes=gt_boxes.to(dtype=data.dtype, device=data.device) if gt_boxes is not None else None,
+             proposals=proposals.to(dtype=data.dtype, device=data.device) if proposals is not None else None,
+             scales_yx=scales_yx.to(dtype=data.dtype, device=data.device) if scales_yx is not None else None,
+             **kwargs,
+         )
 
     @torch.no_grad()
     def inference(
