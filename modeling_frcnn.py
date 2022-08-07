@@ -1,5 +1,6 @@
 """
  coding=utf-8
+ Copyright 2022, Ontocord, LLC
  Copyright 2018, Antonio Mendoza Hao Tan, Mohit Bansal
  Adapted From Facebook Inc, Detectron2 && Huggingface Co.
 
@@ -1664,11 +1665,6 @@ class GeneralizedRCNN(nn.Module):
         self.proposal_generator = RPN(cfg, self.backbone.output_shape())
         self.roi_heads = Res5ROIHeads(cfg, self.backbone.output_shape())
         self.roi_outputs = ROIOutputs(cfg)
-        # in eval and no training mode by default
-        self.eval()
-        for param in self.parameters():
-          param.requires_grad_(False)
-        return model
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
@@ -1829,8 +1825,6 @@ class GeneralizedRCNN(nn.Module):
             )
         # Set model in evaluation mode to deactivate DropOut modules by default
         model.eval()
-        for param in model.parameters():
-          param.requires_grad_(False)
         return model
 
     def forward(
