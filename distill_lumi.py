@@ -66,7 +66,7 @@ from jmin_vlt5.vcr_model import VLT5VCR
 
 from lumi.modeling_vlt5 import VLT5
 from lumi.modeling_dalle import *
-
+from lumi.tokenization_vlt5 import *
 proj_dir = Path(__file__).resolve().parent.parent
 
 
@@ -1062,7 +1062,7 @@ def main_worker(gpu, args):
             )
             train_loaders.append(mmt_train_loader)
 
-    train_loader = multitask_data.MultitaskLoader(
+    train_loader = jmin_vlt5.multitask_data.MultitaskLoader(
         # [
         #     vqa_train_loader,
         #     gqa_train_loader,
@@ -1266,24 +1266,4 @@ if __name__ == "__main__":
     args = parse_args()
     ngpus_per_node = torch.cuda.device_count()
     args.world_size = ngpus_per_node
-    if args.local_rank in [0, -1]:
-        print(args)
-
-        comments = []
-        if args.load is not None:
-            ckpt_str = "_".join(args.load.split('/')[-3:])
-            comments.append(ckpt_str)
-        if args.comment != '':
-            comments.append(args.comment)
-        comment = '_'.join(comments)
-
-        from datetime import datetime
-        current_time = datetime.now().strftime('%b%d_%H-%M')
-        run_name = f'{current_time}_GPU{args.world_size}'
-        if len(comments) > 0:
-            run_name += f'_{comment}'
-
-        args.run_name = run_name
-
-    if args.distributed:
-        main_worker(args.local_rank, args)
+    main_worker(0, args)
