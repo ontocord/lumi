@@ -982,104 +982,20 @@ def main_worker(gpu, args):
 
     train_loaders = []
 
-    if args.epochs > 0:
-        if 'vqa' in args.tasks:
-            print(f'Building VQA train loader at GPU {gpu}')
-            vqa_train_loader = vqa_data.get_loader(
-                vqa_args,
-                split='karpathy_train', mode='train', batch_size=vqa_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(vqa_train_loader)
-            # print(f'VQA train loader len: {len(vqa_train_loader)}')
-        if 'gqa' in args.tasks:
-            print(f'Building GQA train loader at GPU {gpu}')
-            gqa_train_loader = gqa_data.get_loader(
-                gqa_args,
-                split='train,valid', mode='train', batch_size=gqa_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(gqa_train_loader)
-            # print(f'GQA train loader len: {len(gqa_train_loader)}')
-
-        if 'nlvr' in args.tasks:
-            print(f'Building NLVR train loader at GPU {gpu}')
-            nlvr_train_loader = nlvr_data.get_loader(
-                nlvr_args,
-                split='train', mode='train', batch_size=nlvr_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(nlvr_train_loader)
-            # print(f'NLVR train loader len: {len(nlvr_train_loader)}')
-        if 'refcoco' in args.tasks:
-            print(f'Building RefCOCO train loader at GPU {gpu}')
-            refcoco_train_loader = refcoco_data.get_loader(
-                refcoco_args,
-                split='train', mode='train', batch_size=refcoco_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(refcoco_train_loader)
-            # print(f'RefCOCO train loader len: {len(refcoco_train_loader)}')
-
-        if 'vcr' in args.tasks:
-            print(f'Building VCR train loader at GPU {gpu}')
-            vcr_train_loader = vcr_data.get_loader(
-                vcr_args,
-                split='train', mode='train', batch_size=vcr_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(vcr_train_loader)
-        if 'caption' in args.tasks:
-            print(f'Building COCO Caption train loader at GPU {gpu}')
-            caption_train_loader = caption_data.get_loader(
-                caption_args,
-                split='karpathy_train', mode='train', batch_size=caption_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(caption_train_loader)
-        if 'mmt' in args.tasks:
-            print(f'Building MMT train loader at GPU {gpu}')
-            mmt_train_loader = mmt_data.get_loader(
-                mmt_args,
-                split='train', mode='train', batch_size=mmt_args.batch_size,
-                distributed=args.distributed, gpu=args.gpu,
-                workers=args.num_workers,
-                topk=args.train_topk,
-            )
-            train_loaders.append(mmt_train_loader)
-
-    train_loader = multitask_data.MultitaskLoader(
-        # [
-        #     vqa_train_loader,
-        #     gqa_train_loader,
-        #     nlvr_train_loader,
-        #     refcoco_train_loader,
-        #     vcr_train_loader,
-        #     caption_train_loader,
-        #     mmt_train_loader
-        # ],
-        train_loaders,
-        sampling=args.multitask_sampling,
-        verbose=gpu==0)
-
-    # Validation set
     if gpu == 0:
-        val_loader = {}
         if args.epochs > 0:
+            if 'caption' in args.tasks:
+                print(f'Building COCO Caption loader at GPU {gpu}')
+                caption_val_loader = caption_data.get_loader(
+                    caption_args,
+                    split='karpathy_val', mode='val', batch_size=caption_args.batch_size,
+                    distributed=False, gpu=1,
+                    workers=0,
+                    topk=args.valid_topk,
+                )
+                train_loaders.append(caption_val_loader)
             if 'vqa' in args.tasks:
-                print(f'Building VQA val loader at GPU {gpu}')
+                print(f'Building VQA loader at GPU {gpu}')
                 vqa_val_loader = vqa_data.get_loader(
                     vqa_args,
                     split='karpathy_val', mode='val', batch_size=vqa_args.batch_size,
@@ -1087,9 +1003,9 @@ def main_worker(gpu, args):
                     workers=0,
                     topk=args.valid_topk,
                 )
-                val_loader['vqa'] = vqa_val_loader
+                train_loaders.append( vqa_val_loader)
             if 'gqa' in args.tasks:
-                print(f'Building GQA val loader at GPU {gpu}')
+                print(f'Building GQA loader at GPU {gpu}')
                 gqa_val_loader = gqa_data.get_loader(
                     gqa_args,
                     split='testdev', mode='val', batch_size=gqa_args.val_batch_size,
@@ -1097,9 +1013,9 @@ def main_worker(gpu, args):
                     workers=0,
                     topk=args.valid_topk,
                 )
-                val_loader['gqa'] = gqa_val_loader
+                train_loaders.append(gqa_val_loader)
             if 'nlvr' in args.tasks:
-                print(f'Building NLVR val loader at GPU {gpu}')
+                print(f'Building NLVR loader at GPU {gpu}')
                 nlvr_val_loader = nlvr_data.get_loader(
                     nlvr_args,
                     split='valid', mode='val', batch_size=nlvr_args.batch_size,
@@ -1107,9 +1023,9 @@ def main_worker(gpu, args):
                     workers=0,
                     # topk=args.valid_topk,
                 )
-                val_loader['nlvr'] = nlvr_val_loader
+                train_loaders.append(nlvr_val_loader)
             if 'vcr' in args.tasks:
-                print(f'Building VCR val loader at GPU {gpu}')
+                print(f'Building VCR loader at GPU {gpu}')
                 vcr_val_loader = vcr_data.get_loader(
                     vcr_args,
                     split='val', mode='val', batch_size=vcr_args.batch_size,
@@ -1117,9 +1033,9 @@ def main_worker(gpu, args):
                     workers=0,
                     topk=args.valid_topk,
                 )
-                val_loader['vcr'] = vcr_val_loader
+                train_loaders.append(vcr_val_loader)
             if 'refcoco' in args.tasks:
-                print(f'Building RefCOCOg val loader at GPU {gpu}')
+                print(f'Building RefCOCOg loader at GPU {gpu}')
                 refcoco_val_loader = refcoco_data.get_loader(
                     refcoco_args,
                     split='val', mode='val', batch_size=refcoco_args.batch_size,
@@ -1127,19 +1043,10 @@ def main_worker(gpu, args):
                     workers=0,
                     topk=args.valid_topk,
                 )
-                val_loader['refcoco'] = refcoco_val_loader
-            if 'caption' in args.tasks:
-                print(f'Building COCO Caption val loader at GPU {gpu}')
-                caption_val_loader = caption_data.get_loader(
-                    caption_args,
-                    split='karpathy_val', mode='val', batch_size=caption_args.batch_size,
-                    distributed=False, gpu=args.gpu,
-                    workers=0,
-                    topk=args.valid_topk,
-                )
-                val_loader['caption'] = caption_val_loader
+                train_loaders.append(refcoco_val_loader)
+
             if 'mmt' in args.tasks:
-                print(f'Building MMT val loader at GPU {gpu}')
+                print(f'Building MMT loader at GPU {gpu}')
                 mmt_val_loader = mmt_data.get_loader(
                     mmt_args,
                     split='val', mode='val', batch_size=mmt_args.batch_size,
@@ -1147,111 +1054,11 @@ def main_worker(gpu, args):
                     workers=0,
                     topk=args.valid_topk,
                 )
-                val_loader['mmt'] = mmt_val_loader
-
-        # Test set
-        test_loader = {}
-        if 'vqa' in args.tasks:
-            print(f'Building VQA test loader at GPU {gpu}')
-            vqa_test_loader = vqa_data.get_loader(
-                vqa_args,
-                split='karpathy_test', mode='val', batch_size=vqa_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['vqa'] = vqa_test_loader
-            vqa_submit_test_loader = vqa_data.get_loader(
-                vqa_args,
-                split='test', mode='val', batch_size=vqa_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['vqa_submit'] = vqa_submit_test_loader
-
-        # print(f'Building GQA val loader at GPU {gpu}')
-        # gqa_val_loader = gqa_data.get_loader(
-        #     args,
-        #     split='testdev', mode='val', batch_size=gqa_val_batch_size,
-        #     distributed=False, gpu=args.gpu,
-        #     workers=2,
-        #     topk=args.valid_topk,
-        # )
-            # test_loader['gqa'] = gqa_val_loader
-        if 'nlvr' in args.tasks:
-            print(f'Building NLVR test loader at GPU {gpu}')
-            nlvr_test_loader = nlvr_data.get_loader(
-                nlvr_args,
-                split='test', mode='val', batch_size=nlvr_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                # topk=args.valid_topk,
-            )
-            test_loader['nlvr'] = nlvr_test_loader
-
-        # print(f'Building VCR val loader at GPU {gpu}')
-        # vcr_test_loader = vcr_data.get_loader(
-        #     args,
-        #     split='val', mode='val', batch_size=vcr_batch_size,
-        #     distributed=False, gpu=args.gpu,
-        #     workers=args.num_workers,
-        #     topk=args.valid_topk,
-        # )
-        # test_loader['vcr'] = vcr_test_loader
-        if 'refcoco' in args.tasks:
-            print(f'Building RefCOCOg test loader at GPU {gpu}')
-            refcoco_test_loader = refcoco_data.get_loader(
-                refcoco_args,
-                split='test', mode='val', batch_size=refcoco_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['refcoco'] = refcoco_test_loader
-
-        if 'caption' in args.tasks:
-            print(f'Building COCO Caption test loader at GPU {gpu}')
-            caption_test_loader = caption_data.get_loader(
-                caption_args,
-                split='karpathy_test', mode='val', batch_size=caption_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['caption'] = caption_test_loader
-        if 'mmt' in args.tasks:
-            print(f'Building MMT test2016 loader at GPU {gpu}')
-            mmt_test2016_loader = mmt_data.get_loader(
-                mmt_args,
-                split='test_2016_flickr', mode='val', batch_size=mmt_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['mmt_test2016'] = mmt_test2016_loader
-
-            print(f'Building MMT test2017 loader at GPU {gpu}')
-            mmt_test2017_loader = mmt_data.get_loader(
-                mmt_args,
-                split='test_2017_flickr', mode='val', batch_size=mmt_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['mmt_test2017'] = mmt_test2017_loader
-
-            print(f'Building MMT test2018 loader at GPU {gpu}')
-            mmt_test2018_loader = mmt_data.get_loader(
-                mmt_args,
-                split='test_2018_flickr', mode='val', batch_size=mmt_args.batch_size,
-                distributed=False, gpu=args.gpu,
-                workers=0,
-                topk=args.valid_topk,
-            )
-            test_loader['mmt_test2018'] = mmt_test2018_loader
-
-    else:
+                train_loaders.append(mmt_val_loader)
+        train_loader = multitask_data.MultitaskLoader(  
+           train_loaders,
+           sampling=args.multitask_sampling,
+           verbose=gpu==0)
         val_loader = None
         test_loader = None
 
