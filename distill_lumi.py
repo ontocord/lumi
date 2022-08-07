@@ -21,7 +21,7 @@ import torch.backends.cudnn as cudnn
 import sys
 #assumes you have done this:
 #git clone https://github.com/j-min/VL-T5
-#cp -rf https://github.com/j-min/VL-T5/VL-T5/src ./jmin_vlt5
+
 import os, sys
 try:
   sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -31,37 +31,37 @@ except:
                                            os.path.pardir)))
 
 
-sys.path.append('./jmin_vlt5')
+sys.path.append('./VL-T5/VL-T5/src')
 
-from jmin_vlt5.trainer_base import TrainerBase
-from jmin_vlt5.param import parse_args
-import jmin_vlt5.vqa
-import jmin_vlt5.vqa_data
-import jmin_vlt5.gqa
-import jmin_vlt5.gqa_data
-import jmin_vlt5.nlvr
-import jmin_vlt5.nlvr_data
-import jmin_vlt5.vcr
-import jmin_vlt5.vcr_data
-import jmin_vlt5.caption
-import jmin_vlt5.caption_data
-import jmin_vlt5.mmt
-import jmin_vlt5.mmt_data
-import jmin_vlt5.refcoco
-import jmin_vlt5.refcoco_data
+from trainer_base import TrainerBase
+from param import parse_args
+import vqa
+import vqa_data
+import gqa
+import gqa_data
+import nlvr
+import nlvr_data
+import vcr
+import vcr_data
+import caption
+import caption_data
+import mmt
+import mmt_data
+import refcoco
+import refcoco_data
 
-import jmin_vlt5.multitask_data
+import multitask_data
 
-from jmin_vlt5.utils import LossMeter, set_global_logging_level
-from jmin_vlt5.dist_utils import reduce_dict
+from lumi.utils import LossMeter, set_global_logging_level
+from dist_utils import reduce_dict
 
-from jmin_vlt5.vqa_model import VLT5VQA
-from jmin_vlt5.gqa_model import VLT5GQA
-from jmin_vlt5.nlvr_model import VLT5NLVR
-from jmin_vlt5.refcoco_model import VLT5RefCOCO
-from jmin_vlt5.caption_model import VLT5COCOCaption
-from jmin_vlt5.mmt_model import VLT5MMT
-from jmin_vlt5.vcr_model import VLT5VCR
+from vqa_model import VLT5VQA
+from gqa_model import VLT5GQA
+from nlvr_model import VLT5NLVR
+from refcoco_model import VLT5RefCOCO
+from caption_model import VLT5COCOCaption
+from mmt_model import VLT5MMT
+from vcr_model import VLT5VCR
 
 
 from lumi.modeling_vlt5 import VLT5
@@ -160,8 +160,6 @@ class Trainer(TrainerBase):
 
         if not self.verbose:
             set_global_logging_level(logging.ERROR, ["transformers"])
-
-        from multitask_model import VLT5MultiTask
 
         model_kwargs = {}
         
@@ -1062,7 +1060,7 @@ def main_worker(gpu, args):
             )
             train_loaders.append(mmt_train_loader)
 
-    train_loader = jmin_vlt5.multitask_data.MultitaskLoader(
+    train_loader = multitask_data.MultitaskLoader(
         # [
         #     vqa_train_loader,
         #     gqa_train_loader,
