@@ -263,14 +263,6 @@ class JointEncoder(T5Stack):
           images = kwargs['images']
         else:
           images = None
-        if 'normalized_boxes' in kwargs:
-          normalized_boxes = kwargs['normalized_boxes']
-        else:
-          normalized_boxes = None
-        if 'roi_features' in kwargs:
-          roi_features = kwargs['roi_features']
-        else:
-          roi_features = None
         if 'max_detections' in kwargs:
           max_detections= kwargs['max_detections']
         else:
@@ -279,7 +271,7 @@ class JointEncoder(T5Stack):
           do_visualize= kwargs['do_visualize']
         else:
           do_visualize=False
-        if images is not None and vis_inputs is None and frcnn is not None and image_preprocessor is not None:
+        if images is not None and vis_inputs is None:
             if type(images) in (torch.Tensor, np.array):
                 output_dict = decode_image(images, self.frcnn, self.image_preprocessor, max_detections, do_visualize=do_visualize)
             else:
@@ -288,38 +280,38 @@ class JointEncoder(T5Stack):
             for key, val in output_dict.items():
                 if key not in ('roi_features', 'normalized_boxes'):
                     kwargs[key] = val
-        if vis_inputs is None and normalized_boxes is not None:
-            vis_inputs = (normalized_boxes, roi_features)
         
         if inputs_embeds is None:
             assert self.embed_tokens is not None, "You have to initialize the model with valid token embeddings"
             inputs_embeds = self.embed_tokens(input_ids)
 
         B, L = inputs_embeds.size()[:-1]
+        if vis_inputs:
+            vis_feats = vis_inputs[0]
+            boxes = vis_inputs[1]
+            img_order_ids = None
+            obj_order_ids = None
+            if len(vis_inputs) >= 3:
+                img_order_ids = vis_inputs[2]
+            if len(vis_inputs) == 4:
+                obj_order_ids = vis_inputs[3]
 
-        vis_feats = vis_inputs[0]
-        boxes = vis_inputs[1]
-        img_order_ids = None
-        obj_order_ids = None
-        if len(vis_inputs) >= 3:
-            img_order_ids = vis_inputs[2]
-        if len(vis_inputs) == 4:
-            obj_order_ids = vis_inputs[3]
+            vis_embeds = self.visual_embedding(
+                vis_feats, boxes, img_order_ids, obj_order_ids)
 
-        vis_embeds = self.visual_embedding(
-            vis_feats, boxes, img_order_ids, obj_order_ids)
+            V_L = vis_embeds.size(1)
 
-        V_L = vis_embeds.size(1)
-
-        inputs_embeds = torch.cat([inputs_embeds, vis_embeds], dim=1)
-
+            inputs_embeds = torch.cat([inputs_embeds, vis_embeds], dim=1)
+        else:
+            v_L = 0
+            
         if attention_mask is None:
             attention_mask = input_ids.ne(self.config.pad_token_id).to(dtype=inputs_embeds.dtype, device=inputs_embeds.device)
 
-        if vis_attention_mask is None:
-            vis_attention_mask = attention_mask.new_ones(B, V_L)
-
-        attention_mask = torch.cat([attention_mask, vis_attention_mask], dim=1)
+        if vis_inputs is not None: 
+            if vis_attention_mask is None:
+                vis_attention_mask = attention_mask.new_ones(B, V_L)
+            attention_mask = torch.cat([attention_mask, vis_attention_mask], dim=1)
 
         # ourselves in which case we just need to make it broadcastable to all heads.
         extended_attention_mask = self.get_extended_attention_mask(
