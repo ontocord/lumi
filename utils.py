@@ -66,6 +66,71 @@ import torch.distributed as dist
 import collections
 import logging
 
+
+in_notebook = 'google.colab' in sys.modules
+if not in_notebook:
+    try:
+        get_ipython()
+    except:
+      in_notebook = False
+if in_notebook:
+    from IPython.display import clear_output, Image, display
+
+import PIL.Image
+
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, image_features=None):
+  p = next(clip_model.parameters())
+  if image_features is None:
+    inputs = clip_processor(images=image, return_tensors="pt")
+    inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
+    with torch.no_grad():
+      image_features = clip_model.get_image_features(**inputs)
+
+  inputs = clip_processor(text_array, padding=True, return_tensors="pt").to(p.device)
+  with torch.no_grad():
+    text_features = clip_model.get_text_features(**inputs)
+
+  return {'scores': cosine_similarity(image_features, text_features, dim=1), 'image_features': image_features, 'text_features': text_features}
+
+
+# for visualizing output
+def showarray(a, fmt='jpeg'):
+    a = np.uint8(np.clip(a, 0, 255))
+    f = io.BytesIO()
+    PIL.Image.fromarray(a).save(f, fmt)
+    display(Image(data=f.getvalue()))
+
+
+def decode_image(img, frcnn,  image_preprocessor, max_detections=36, do_visualize=False):
+  global in_notebook
+  if in_notebook and do_visualize: frcnn_visualizer = SingleImageViz(img, id2obj=objids, id2attr=attrids) 
+
+  images, sizes, scales_yx = image_preprocessor(img) 
+
+
+  output_dict = frcnn(
+      images, 
+      sizes, 
+      scales_yx = scales_yx, 
+      padding = 'max_detections', 
+      max_detections = max_detections, 
+      return_tensors = 'pt' 
+  )
+
+  if in_notebook and do_visualize:
+    # add boxes and labels to the image 
+    frcnn_visualizer.draw_boxes(
+        output_dict.get("boxes"), 
+        output_dict.get("obj_ids"),
+        output_dict.get("obj_probs"),
+        output_dict.get("attr_ids"), 
+        output_dict.get("attr_probs"),
+    )
+
+    showarray(frcnn_visualizer._get_buffer())
+
+  return output_dict
+
 def get_area(pos):
     """
     Args
