@@ -38,15 +38,16 @@ from .frcnn_ids import *
 from .visualizing_image import SingleImageViz
 from .processing_image import *
 from .modeling_frcnn import *
-
-# from utils import *
+from .utils import *
 
 logger = logging.get_logger(__name__)
-
+  
 #function to generate some text from the model, given a prompt and an image 
 def image2text(model, tokenizer, prompt, img, **kwargs):
     param = next(model.parameters()).data
     output_dict = decode_image(asarray(img),  model.frcnn, model.image_preprocessor)
+    roi_features = output_dict['roi_features'].clone()
+    normalized_boxes = output_dict['normalized_boxes'].clone()
     output_dict['roi_features'] = output_dict['roi_features'].to(dtype=param.dtype, device=param.device)
     output_dict['normalized_boxes'] = output_dict ['normalized_boxes'].to(dtype=param.dtype, device=param.device)
     for key, val in output_dict.items():
@@ -54,46 +55,8 @@ def image2text(model, tokenizer, prompt, img, **kwargs):
     kwargs['vis_inputs'] = (output_dict['roi_features'], output_dict ['normalized_boxes'])
     input_ids = tokenizer(prompt, return_tensors='pt', padding=True).input_ids.to(param.device)
     output = model.generate(input_ids=input_ids, **kwargs)
-    return output, tokenizer.batch_decode(output, skip_special_tokens=True)
+    return {'normalized_boxes': normalized_boxes, 'roi_features': roi_features, 'ouput_tensor': output, 'text': tokenizer.batch_decode(output, skip_special_tokens=True)[0]}
 
-
-# for visualizing output
-def showarray(a, fmt='jpeg'):
-    a = np.uint8(np.clip(a, 0, 255))
-    f = io.BytesIO()
-    PIL.Image.fromarray(a).save(f, fmt)
-    display(Image(data=f.getvalue()))
-
-
-def decode_image(img, frcnn,  image_preprocessor, max_detections=36, do_visualize=False):
-  global in_notebook
-  if in_notebook and do_visualize: frcnn_visualizer = SingleImageViz(img, id2obj=objids, id2attr=attrids) 
-
-  images, sizes, scales_yx = image_preprocessor(img) 
-
-
-  output_dict = frcnn(
-      images, 
-      sizes, 
-      scales_yx = scales_yx, 
-      padding = 'max_detections', 
-      max_detections = max_detections, 
-      return_tensors = 'pt' 
-  )
-
-  if in_notebook and do_visualize:
-    # add boxes and labels to the image 
-    frcnn_visualizer.draw_boxes(
-        output_dict.get("boxes"), 
-        output_dict.get("obj_ids"),
-        output_dict.get("obj_probs"),
-        output_dict.get("attr_ids"), 
-        output_dict.get("attr_probs"),
-    )
-
-    showarray(frcnn_visualizer._get_buffer())
-
-  return output_dict
 
 class VisualEmbedding(nn.Module):
     def __init__(self, config, obj_order_embedding):
