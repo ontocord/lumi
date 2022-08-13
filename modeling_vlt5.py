@@ -39,8 +39,6 @@ from .visualizing_image import SingleImageViz
 from .processing_image import *
 from .modeling_frcnn import *
 from .utils import *
-
-logger = logging.get_logger(__name__)
   
 #function to generate some text from the model, given a prompt and an image 
 def image2text(model, tokenizer, prompt, img, **kwargs):
