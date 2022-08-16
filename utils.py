@@ -40,7 +40,7 @@ import requests
 import wget
 from filelock import FileLock
 from yaml import Loader, dump, load
-
+from torch.nn.functional import cosine_similarity
 
 try:
     import torch
