@@ -247,6 +247,7 @@ class JointEncoder(T5Stack):
             inputs_embeds = self.embed_tokens(input_ids)
 
         B, L = inputs_embeds.size()[:-1]
+        V_L = 0
         if vis_inputs:
             vis_feats = vis_inputs[0]
             boxes = vis_inputs[1]
@@ -263,8 +264,6 @@ class JointEncoder(T5Stack):
             V_L = vis_embeds.size(1)
 
             inputs_embeds = torch.cat([inputs_embeds, vis_embeds], dim=1)
-        else:
-            v_L = 0
             
         if attention_mask is None:
             attention_mask = input_ids.ne(self.config.pad_token_id).to(dtype=inputs_embeds.dtype, device=inputs_embeds.device)
