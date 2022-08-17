@@ -78,19 +78,25 @@ if in_notebook:
 
 import PIL.Image
 
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, image_features=None):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, image_features=None, decompose_image=False):
   p = next(clip_model.parameters())
   if image_features is None:
     inputs = clip_processor(images=image, return_tensors="pt")
     inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
     with torch.no_grad():
-      image_features = clip_model.get_image_features(**inputs)
-
+      image_features = clip_model.get_image_features(**inputs, output_hidden_states=decompose_image)
+      if decompose_image:
+       image_features = image_features["hidden_states"]
+       image_features_shape = image_fetures.shape
+       image_features = image_features.unsqueeze(1)
+                                      
+                                       
   inputs = clip_processor(text_array, padding=True, return_tensors="pt").to(p.device)
   with torch.no_grad():
     text_features = clip_model.get_text_features(**inputs)
-
-  return {'scores': cosine_similarity(image_features, text_features, dim=1), 'image_features': image_features, 'text_features': text_features}
+  scores =  cosine_similarity(image_features, text_features, dim=1)
+  if decompose_image: scores.reshape(image_features_shape+[len(text_array)])   
+  return {'scores': scores, 'image_features': image_features, 'text_features': text_features}
 
 
 # for visualizing output
