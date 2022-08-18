@@ -1,5 +1,6 @@
 """
  coding=utf-8
+ Copyright 2022, Ontocord, LLC
  Copyright 2018, Antonio Mendoza Hao Tan, Mohit Bansal, Huggingface team :)
  Adapted From Facebook Inc, Detectron2
  Licensed under the Apache License, Version 2.0 (the "License");
