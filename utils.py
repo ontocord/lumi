@@ -78,6 +78,7 @@ if in_notebook:
     from IPython.display import clear_output, Image, display
 
 import PIL.Image
+
 def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
   p = next(clip_model.parameters())
   decomposed_image_features = None 
@@ -88,7 +89,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       inputs['return_dict'] = True
       clip_vision_output = clip_model.vision_model(**inputs)
       if decompose_image:
-        o = (clip_output["last_hidden_state"] + 4*clip_vision_output["last_hidden_state"][:,0,:])/5
+        o = (clip_vision_output["last_hidden_state"] + 4*clip_vision_output["last_hidden_state"][:,0,:])/5
         clip_vision_output.decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
       clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"])
   image_features = clip_vision_output.image_features
