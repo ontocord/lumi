@@ -77,6 +77,7 @@ if in_notebook:
     from IPython.display import clear_output, Image, display
 
 import PIL.Image
+
 def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
   p = next(clip_model.parameters())
   decomposed_image_features = None 
@@ -99,15 +100,15 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
   scores =  cosine_similarity(image_features, text_features, dim=1)
   if decompose_image:
     decomposed_scores_topk = []
-    scores2_values = []
+    decomposed_scores = []
     for tfeat in text_features:
       scores2 =  cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
       decomposed_scores_topk.append(scores2.topk(k=decomposed_image_features.shape[1]))
-      scores2_values.append(decomposed_scores_topk[-1].values[0])
+      decomposed_scores.append(decomposed_scores_topk[-1].values[0])
   else:
     decomposed_scores_topk = [] 
-    scores2_values = []
-  return {'scores': scores, 'scores2': torch.stack(scores2_values) if scores2_values else [], 'decomposed_scores_topk': decomposed_scores_topk, 'clip_vision_output': clip_vision_output, 'text_features': text_features}
+    decomposed_scores = []
+  return {'scores': scores, 'decomposed_scores': torch.stack(decomposed_scores) if scores2_values else [], 'decomposed_scores_topk': decomposed_scores_topk, 'clip_vision_output': clip_vision_output, 'text_features': text_features}
 
  # for visualizing output
 def showarray(a, fmt='jpeg'):
