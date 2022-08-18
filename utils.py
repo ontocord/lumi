@@ -77,40 +77,39 @@ if in_notebook:
     from IPython.display import clear_output, Image, display
 
 import PIL.Image
-
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, image_features=None, decompose_image=False):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
   p = next(clip_model.parameters())
-  image_features2 = None 
-  if image_features is None:
+  decomposed_image_features = None 
+  if clip_vision_output is None:
     inputs = clip_processor(images=image, return_tensors="pt")
     with torch.no_grad():
       inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
       inputs['return_dict'] = True
-      clip_output = clip_model.vision_model(**inputs)
+      clip_vision_output = clip_model.vision_model(**inputs)
       if decompose_image:
-        o = (clip_output["last_hidden_state"] + 4*clip_output["last_hidden_state"][:,0,:])/5
-        image_features2 = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
-        image_features2_shape = image_features2.shape
-        #image_features2 = image_features2
-      image_features = clip_model.visual_projection(clip_output["pooler_output"])
-                                       
+        o = (clip_output["last_hidden_state"] + 4*clip_vision_output["last_hidden_state"][:,0,:])/5
+        clip_vision_output.decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
+      clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"])
+  image_features = clip_vision_output.image_features
+  if hasattr(clip_vision_output, 'decomposed_image_features'):
+    decomposed_image_features = clip_vision_output.decomposed_image_features
   inputs = clip_processor(text_array, padding=True, return_tensors="pt").to(p.device)
   with torch.no_grad():
     text_features = clip_model.get_text_features(**inputs)
   scores =  cosine_similarity(image_features, text_features, dim=1)
   if decompose_image:
-    scores2_list = []
+    decomposed_scores_topk = []
     scores2_values = []
-    for tf in text_features:
-      scores2 =  cosine_similarity(image_features2.squeeze(0), tf.unsqueeze(0), dim=1)
-      scores2_list.append(scores2.topk(k=image_features2.shape[1]))
-      scores2_values.append(scores2_list[-1].values[0])
+    for tfeat in text_features:
+      scores2 =  cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
+      decomposed_scores_topk.append(scores2.topk(k=decomposed_image_features.shape[1]))
+      scores2_values.append(decomposed_scores_topk[-1].values[0])
   else:
-    scores2_list = [] 
+    decomposed_scores_topk = [] 
     scores2_values = []
-  return {'scores': scores, 'scores2': torch.stack(scores2_values) if scores2_values else [], 'decomposed_scores': scores2_list, 'image_features': image_features, 'text_features': text_features}
+  return {'scores': scores, 'scores2': torch.stack(scores2_values) if scores2_values else [], 'decomposed_scores_topk': decomposed_scores_topk, 'clip_vision_output': clip_vision_output, 'text_features': text_features}
 
-# for visualizing output
+ # for visualizing output
 def showarray(a, fmt='jpeg'):
     a = np.uint8(np.clip(a, 0, 255))
     f = io.BytesIO()
