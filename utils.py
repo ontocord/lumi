@@ -96,7 +96,7 @@ from transformers import CLIPProcessor, CLIPModel
 import torch
 from sentence_transformers import SentenceTransformer
 from torch.nn.functional import cosine_similarity
-import .stopwords  as stopwords
+from .stopwords  import stopwords
 import json
 import tqdm
 import numpy
@@ -206,7 +206,7 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
     #vlt5_data = torch.load("/content/drive/Shareddrives/ontocord/vlt5_datasets/vlt5_data_0.pt")
 
 
-    stopwords_set = set(list(itertools.chain(*list(stopwords.stopwords.values()))))
+    stopwords_set = set(list(itertools.chain(*list(stopwords.values()))))
 
     if not os.path.exists("en_mdd.txt.gz"):
       os.system(f"cp {file} ./en_mdd.txt.gz")
