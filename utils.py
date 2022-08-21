@@ -87,9 +87,6 @@ import PIL.Image
 
 import random
 from .indexed_gzip import *
-from .modeling_vlt5 import *
-from .tokenization_vlt5 import *
-from .modeling_dalle import *
 from PIL import Image
 import requests
 from transformers import CLIPProcessor, CLIPModel
@@ -184,6 +181,10 @@ def image_from_numpystr(numpystr, dtype="uint8", shape=(75,75,3)):
   return PIL.Image.fromarray(numpy.fromstring(numpystr, dtype=dtype).reshape(shape))
 
 def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
+    
+  from .modeling_vlt5 import VLT5
+  from .tokenization_vlt5 import VLT5Tokenizer
+  from .modeling_dalle import DalleModel
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device
   import spacy
   device = pytorch_device
@@ -201,7 +202,7 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
     clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     clip_model = clip_model.half().eval().to(device)
       
-    #vlt5_tokenizer = VLT5Tokenizer.from_pretrained("ontocord/vlt5")
+    vlt5_tokenizer = VLT5Tokenizer.from_pretrained("ontocord/vlt5")
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     #vlt5_data = torch.load("/content/drive/Shareddrives/ontocord/vlt5_datasets/vlt5_data_0.pt")
 
