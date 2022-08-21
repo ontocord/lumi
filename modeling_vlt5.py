@@ -42,18 +42,22 @@ from .utils import *
   
 #function to generate some text from the model, given a prompt and an image 
 def vlt5_image2text(model, tokenizer, prompt, img, **kwargs):
+    if 'max_detections' in kwargs:
+        max_detections = kwargs['max_detections']
+    else:
+        max_detections = 36
     param = next(model.parameters()).data
-    output_dict = decode_image(asarray(img),  model.frcnn, model.image_preprocessor)
-    roi_features = output_dict['roi_features'].clone()
-    normalized_boxes = output_dict['normalized_boxes'].clone()
-    output_dict['roi_features'] = output_dict['roi_features'].to(dtype=param.dtype, device=param.device)
-    output_dict['normalized_boxes'] = output_dict ['normalized_boxes'].to(dtype=param.dtype, device=param.device)
-    for key, val in output_dict.items():
+    frcnn_output = decode_image(asarray(img),  model.frcnn, model.image_preprocessor, max_detections=max_detections)
+    roi_features = frcnn_output['roi_features'].clone()
+    normalized_boxes = frcnn_output['normalized_boxes'].clone()
+    frcnn_output['roi_features'] = frcnn_output['roi_features'].to(dtype=param.dtype, device=param.device)
+    frcnn_output['normalized_boxes'] = frcnn_output ['normalized_boxes'].to(dtype=param.dtype, device=param.device)
+    for key, val in frcnn_output.items():
       kwargs[key] = val
-    kwargs['vis_inputs'] = (output_dict['roi_features'], output_dict ['normalized_boxes'])
+    kwargs['vis_inputs'] = (frcnn_output['roi_features'], frcnn_output ['normalized_boxes'])
     input_ids = tokenizer(prompt, return_tensors='pt', padding=True).input_ids.to(param.device)
     output = model.generate(input_ids=input_ids, **kwargs)
-    return {'normalized_boxes': normalized_boxes, 'roi_features': roi_features, 'ouput_tensor': output, 'text': tokenizer.batch_decode(output, skip_special_tokens=True)[0]}
+    return {'frcnn_output': frcnn_output, 'normalized_boxes': normalized_boxes, 'roi_features': roi_features, 'output_tensor': output, 'text': tokenizer.batch_decode(output, skip_special_tokens=True)[0]}
 
 
 class VisualEmbedding(nn.Module):
