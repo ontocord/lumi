@@ -44,6 +44,7 @@ from .utils import *
 def vlt5_image2text(model, tokenizer, prompt, img, **kwargs):
     if 'max_detections' in kwargs:
         max_detections = kwargs['max_detections']
+        del kwargs['max_detections']
     else:
         max_detections = 36
     param = next(model.parameters()).data
