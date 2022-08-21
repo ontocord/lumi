@@ -41,7 +41,7 @@ from .modeling_frcnn import *
 from .utils import *
   
 #function to generate some text from the model, given a prompt and an image 
-def image2text(model, tokenizer, prompt, img, **kwargs):
+def vlt5_image2text(model, tokenizer, prompt, img, **kwargs):
     param = next(model.parameters()).data
     output_dict = decode_image(asarray(img),  model.frcnn, model.image_preprocessor)
     roi_features = output_dict['roi_features'].clone()
