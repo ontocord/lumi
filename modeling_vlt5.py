@@ -233,15 +233,11 @@ class JointEncoder(T5Stack):
           max_detections= kwargs['max_detections']
         else:
           max_detections= self.config.MAX_DETECTIONS if hasattr(self.config, 'MAX_DETECTIONS') else 32
-        if 'do_visualize' in kwargs:
-          do_visualize= kwargs['do_visualize']
-        else:
-          do_visualize=False
         if images is not None and vis_inputs is None:
             if type(images) in (torch.Tensor, np.array):
-                output_dict = decode_image(images, self.frcnn, self.image_preprocessor, max_detections, do_visualize=do_visualize)
+                output_dict = decode_image(images, self.frcnn, self.image_preprocessor, max_detections)
             else:
-                output_dict = decode_image(asarray(images), self.frcnn, self.image_preprocessor, max_detections, do_visualize=do_visualize)
+                output_dict = decode_image(asarray(images), self.frcnn, self.image_preprocessor, max_detections)
             normalized_boxes, roi_features = output_dict['normalized_boxes'], output_dict['roi_features']
             for key, val in output_dict.items():
                 if key not in ('roi_features', 'normalized_boxes'):
