@@ -66,7 +66,13 @@ import torch
 import torch.distributed as dist
 import collections
 import logging
-
+import sys, os
+try:
+  sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           os.path.pardir)))
+except:
+  sys.path.append(os.path.abspath(os.path.join("./",
+                                           os.path.pardir)))
 
 in_notebook = 'google.colab' in sys.modules
 if not in_notebook:
