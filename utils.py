@@ -396,8 +396,11 @@ def showarray(a, fmt='jpeg'):
     display(Image(data=f.getvalue()))
 
 
-def decode_image(img, frcnn,  image_preprocessor, max_detections=36):
-  frcnn_visualizer = SingleImageViz(img, id2obj=objids, id2attr=attrids) 
+def decode_image(img, frcnn,  image_preprocessor, max_detections=36, annotated_image=False):
+  from .visualizing_image import SingleImageViz
+  from .frcnn_ids import objids, attrids
+  if annotated_image:
+    frcnn_visualizer = SingleImageViz(img, id2obj=objids, id2attr=attrids) 
 
   images, sizes, scales_yx = image_preprocessor(img) 
 
@@ -411,7 +414,7 @@ def decode_image(img, frcnn,  image_preprocessor, max_detections=36):
       return_tensors = 'pt' 
   )
 
-  if True:
+  if annotated_image:
     # add boxes and labels to the image 
     frcnn_visualizer.draw_boxes(
         output_dict.get("boxes"), 
@@ -421,11 +424,10 @@ def decode_image(img, frcnn,  image_preprocessor, max_detections=36):
         output_dict.get("attr_probs"),
     )
 
+    
     a = frcnn_visualizer._get_buffer()
     a = np.uint8(np.clip(a, 0, 255))
-    f = io.BytesIO()
-    PIL.Image.fromarray(a).save(f, fmt)
-    output_dict['annotated_image'] = Image(data=f.getvalue())
+    output_dict['annotated_image'] = PIL.Image.fromarray(a)
     
 
   return output_dict
