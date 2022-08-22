@@ -85,7 +85,6 @@ if in_notebook:
 import PIL.Image
 
 import random
-from .indexed_gzip import *
 from PIL import Image
 import requests
 from transformers import CLIPProcessor, CLIPModel
@@ -179,7 +178,7 @@ def image_from_numpystr(numpystr, dtype="uint8", shape=(75,75,3)):
   return PIL.Image.fromarray(numpy.fromstring(numpystr, dtype=dtype).reshape(shape))
 
 def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
-    
+  from .indexed_gzip import *
   from .modeling_vlt5 import VLT5
   from .tokenization_vlt5 import VLT5Tokenizer
   from .modeling_dalle import DalleModel
@@ -213,6 +212,7 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
 
 
 def process_images(filename, en_mdd_file="/content/drive/Shareddrives/ontocord/mdd/en_mdd.txt.gz", cutoff=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50):
+  from .indexed_gzip import *
   global spacy_nlp, clip_model, clip_processor, minidalle, device
   init_data(en_mdd_file)
   with open(filename, "w") as out:
