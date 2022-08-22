@@ -38,7 +38,6 @@ from tqdm.auto import tqdm
 
 import cv2
 import requests
-import wget
 from filelock import FileLock
 from yaml import Loader, dump, load
 from torch.nn.functional import cosine_similarity
@@ -1024,6 +1023,7 @@ def get_image_from_url(url):
 
 # to load legacy frcnn checkpoint from detectron
 def load_frcnn_pkl_from_url(url):
+    import wget
     fn = url.split("/")[-1]
     if fn not in os.listdir(os.getcwd()):
         wget.download(url)
