@@ -89,8 +89,7 @@ from .indexed_gzip import *
 from PIL import Image
 import requests
 from transformers import CLIPProcessor, CLIPModel
-import torch
-from sentence_transformers import SentenceTransformer
+import torch\
 from torch.nn.functional import cosine_similarity
 from .stopwords  import stopwords
 import json
