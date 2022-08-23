@@ -286,10 +286,11 @@ def create_synthetic_text_image_data(filename, en_mdd_file="/content/drive/Share
                     elif random.randint(0,5)==0:
                       matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][1]} in this picture? || No"]                      
                     out.write(str(matched_output)+"\n")
-                    if 'annotated_image' in vlt5_output['frcnn_output']:
-                      display(vlt5_output['frcnn_output']['annotated_image'])
-                    else:
-                      display(img)
+                    if False:
+                      if 'annotated_image' in vlt5_output['frcnn_output']:
+                        display(vlt5_output['frcnn_output']['annotated_image'])
+                      else:
+                        display(img)
                     word_str = ", ".join([a[1] for a in element2text if a[2] > 0.20 and a[1] != vlt5_caption])
                     if word_str:
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
@@ -302,12 +303,12 @@ def create_synthetic_text_image_data(filename, en_mdd_file="/content/drive/Share
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      matched_outpt = get_decomposed_sent_to_img(generated_sentence, img)
+                      matched_output = get_decomposed_sent_to_img(generated_sentence, img)
                       matched_output['tokens'] = tokens.tostring()
                       matched_output['thumbnail'] = np.array(img).tostring()
                       if matched_output and matched_output['score'] > score_cutoff:
                         out.write(str(matched_output)+"\n")
-                        print ( matched_output['score'], '**', generated_sentence)
-                        display(img)                    
+                        #print ( matched_output['score'], '**', generated_sentence)
+                        #display(img)                    
                     dat_cnt += 1
               
