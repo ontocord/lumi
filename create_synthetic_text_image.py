@@ -278,7 +278,7 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
                     element2text = matched_output['element2text']
-                    vlt5_caption_with_score = [e for e in element2text.evalues() if e[0] == vlt5_caption]
+                    vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
                     if vlt5_caption_with_score:
                       if vlt5_caption_with_score[0][1] > 0.21:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
