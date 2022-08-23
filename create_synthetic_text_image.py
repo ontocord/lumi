@@ -50,7 +50,7 @@ def simplify_person(text, all_persons):
   return text
 
 
-def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
+def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
   device = pytorch_device
   if vlt5_data_file and vlt5_data is None:
@@ -76,10 +76,10 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
 
     stopwords_set = set(list(itertools.chain(*list(stopwords.values()))))
 
-    if not os.path.exists("./en_mdd.txt.gz"):
-      print (en_mdd_file)
-      os.system(f"cp {en_mdd_file} ./")
-    IndexedGzipFileExt("en_mdd.txt.gz") 
+    if not os.path.exists("./en.txt.gz"):
+      print (en_txt_gz_file)
+      os.system(f"cp {en_txt_gz_file} ./en.txt.gz")
+    IndexedGzipFileExt("en.txt.gz") 
 
 def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
@@ -112,11 +112,11 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None                    
                     
-def create_synthetic_text_image_data(filename, en_mdd_file="/content/drive/Shareddrives/ontocord/mdd/en_mdd.txt.gz", max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50):
+def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
-  init_data(en_mdd_file)
+  init_data(en_txt_gz_file)
   with open(filename, "w") as out:
-   with IndexedGzipFileExt("en_mdd.txt.gz") as f:
+   with IndexedGzipFileExt("en.txt.gz") as f:
       for cnt in tqdm.tqdm(range(max_items)):
         j = random.randint(0, len(f)-1)
         l = f[j]
