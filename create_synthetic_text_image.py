@@ -1,6 +1,6 @@
 import random
 import spacy
-import .stopwords  as stopwords
+from .stopwords  import stopwords
 from .indexed_gzip import *
 from .modeling_vlt5 import *
 from .tokenization_vlt5 import *
@@ -74,7 +74,7 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
     commongen_tokenizer = AutoTokenizer.from_pretrained("mrm8488/t5-base-finetuned-common_gen")
     commongen_model = AutoModelWithLMHead.from_pretrained("mrm8488/t5-base-finetuned-common_gen").eval().half().to(device)
 
-    stopwords_set = set(list(itertools.chain(*list(stopwords.stopwords.values()))))
+    stopwords_set = set(list(itertools.chain(*list(stopwords.values()))))
 
     if not os.path.exists("./en_mdd.txt.gz"):
       print (en_mdd_file)
