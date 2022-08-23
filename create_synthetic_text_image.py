@@ -18,6 +18,38 @@ import numpy
 import sys, os
 
 
+try:
+  if minidalle is None:
+    pass
+except:
+  minidalle = spacy_nlp = clip_model= clip_processor= stopwords_set= vlt5 = None
+  device = 'cuda'
+
+#TODO improve this with more variety
+def get_person(is_male=True):
+  norp = ""
+  norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
+  norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
+  norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
+  norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
+  norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
+  if is_male: 
+    person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
+  else:
+    person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
+  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return person
+
+def simplify_person(text, all_persons):
+  for person2 in all_persons:
+    person_arr = person2.split()
+    if len(person_arr) > 3:
+      person_arr = [person_arr[0]] + person_arr[-2:]
+    person3 = " ".join(person_arr)
+    text = text.replace(person2, person3)
+  return text
+
+
 def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
   device = pytorch_device
