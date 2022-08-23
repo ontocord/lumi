@@ -304,11 +304,12 @@ def create_synthetic_text_image_data(filename, en_mdd_file="/content/drive/Share
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img)
-                      matched_output['tokens'] = tokens.tostring()
-                      matched_output['thumbnail'] = np.array(img).tostring()
-                      if matched_output and matched_output['score'] > score_cutoff:
-                        out.write(str(matched_output)+"\n")
-                        #print ( matched_output['score'], '**', generated_sentence)
-                        #display(img)                    
+                      if matched_output:
+                        matched_output['tokens'] = tokens.tostring()
+                        matched_output['thumbnail'] = np.array(img).tostring()
+                        if matched_output and matched_output['score'] > score_cutoff:
+                          out.write(str(matched_output)+"\n")
+                          #print ( matched_output['score'], '**', generated_sentence)
+                          #display(img)                    
                     dat_cnt += 1
               
