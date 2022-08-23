@@ -110,7 +110,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None                    
                     
-def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50):
+def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(en_txt_gz_file)
   with open(filename, "w") as out:
