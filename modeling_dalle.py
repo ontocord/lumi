@@ -151,7 +151,7 @@ class AttentionBase(nn.Module):
             keys
         )
         attention_weights += attention_bias[:, None, None, :]
-        attention_weights = torch.softmax(attention_weights, -1, dtype=torch.float32).to(dtype=attention_weights.dtype)
+        attention_weights = torch.softmax(attention_weights, -1) # , dtype=torch.float32).to(dtype=attention_weights.dtype)
         attention_output: FloatTensor = torch.einsum(
             "bhqk,bkhc->bqhc",
             attention_weights, 
@@ -160,10 +160,7 @@ class AttentionBase(nn.Module):
         shape = attention_output.shape[:2] + (self.embed_count,)
         attention_output = attention_output.reshape(shape)
         attention_output = self.out_proj.forward(attention_output)
-        if torch.isinf(attention_output).any():
-            clamp_value = torch.finfo(attention_output.dtype).max - 1000
-            attention_output = torch.clamp(attention_output, min=-clamp_value, max=clamp_value)
-
+        
         return attention_output
 
 
@@ -239,10 +236,7 @@ class DalleBartEncoder(nn.Module):
         encoder_state = self.layernorm_embedding.forward(encoder_state)
         for layer in self.layers:
             encoder_state = layer.forward(encoder_state, attention_mask)
-            if torch.isinf(encoder_state).any():
-              clamp_value = torch.finfo(encoder_state.dtype).max - 1000
-              encoder_state = torch.clamp(encoder_state, min=-clamp_value, max=clamp_value)
-
+            
         encoder_state = self.final_ln.forward(encoder_state)
         return encoder_state
 
@@ -399,16 +393,10 @@ class DalleBartDecoder(nn.Module):
                 attention_mask,
                 token_index
             )
-            if torch.isinf(decoder_state).any():
-              clamp_value = torch.finfo(decoder_state.dtype).max - 1000
-              decoder_state = torch.clamp(decoder_state, min=-clamp_value, max=clamp_value)
-
+            
         decoder_state = self.final_ln(decoder_state)
         logits = self.lm_head(decoder_state)
-        if torch.isinf(logits).any():
-            clamp_value = torch.finfo(logits.dtype).max - 1000
-            logits = torch.clamp(logits, min=-clamp_value, max=clamp_value)
-
+        
         return logits, decoder_state
 
     def decode_step(
@@ -436,17 +424,11 @@ class DalleBartDecoder(nn.Module):
                 attention_mask,
                 token_index
             )
-            if torch.isinf(decoder_state).any():
-              clamp_value = torch.finfo(decoder_state.dtype).max - 1000
-              decoder_state = torch.clamp(decoder_state, min=-clamp_value, max=clamp_value)
-
+            
             
         decoder_state = self.final_ln(decoder_state)
         logits = self.lm_head(decoder_state)
-        if torch.isinf(logits).any():
-            clamp_value = torch.finfo(logits.dtype).max - 1000
-            logits = torch.clamp(logits, min=-clamp_value, max=clamp_value)
-
+        
         #print (decoder_state.dtype, logits.dtype, self.zero_prob)
         a = 2 ** log2_supercondition_factor
         logits: FloatTensor = (
