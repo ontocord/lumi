@@ -58,7 +58,7 @@ def init_data(en_mdd_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   if minidalle is None: 
     spacy_nlp = spacy.load('en_core_web_md')
   
-    minidalle = DalleModel.from_pretrained("ontocord/minidalle").eval().to(torch.bfloat16).to(device)
+    minidalle = DalleModel.from_pretrained("ontocord/minidalle").eval().half().to(device)
     vlt5 = VLT5.from_pretrained("ontocord/vlt5").eval().to(device) #half().
     #sim_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2").half().eval().to(device)
 
