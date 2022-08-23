@@ -291,7 +291,7 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                         display(vlt5_output['frcnn_output']['annotated_image'])
                       else:
                         display(img)
-                    word_str = ", ".join([a[0] for a in element2text if a[1] > score_cutoff and a[0] != vlt5_caption])
+                    word_str = ", ".join([a[0] for a in element2text.values() if a[1] > score_cutoff and a[0] != vlt5_caption])
                     if word_str:
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                     min_length=len(word_str.split())*3, 
