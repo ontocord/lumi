@@ -19,6 +19,7 @@ class ResnetBlock(Module):
     def forward(self, x: FloatTensor) -> FloatTensor:
         h = x
         h = self.norm1.forward(h)
+        h[torch.isnan(h)] = 0.0
         h *= torch.sigmoid(h)
         h = self.conv1.forward(h)
         h = self.norm2.forward(h)
@@ -153,6 +154,7 @@ class Decoder(Module):
             z = self.up[i].forward(z)
 
         z = self.norm_out.forward(z)
+        z[torch.isnan(z)] = 0
         z *= torch.sigmoid(z)
         z = self.conv_out.forward(z)
         return z
