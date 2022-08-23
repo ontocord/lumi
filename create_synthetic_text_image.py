@@ -103,11 +103,9 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
       #image is shape = [75,75,3], dtype="uint8"
       #tokens is [1, 1028] int16
-      element2text = [[key]+list(val) for key, val in clip_output['element2text'].items()]
-      #element2text.sort(key=lambda a: a[0])
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
-      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'element2text': element2text, \
+      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'element2text': clip_output['element2text'], \
                               'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(), }
       return matched_output
   return None                    
@@ -280,18 +278,20 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
                     element2text = matched_output['element2text']
-                    vlt5_caption_with_score = [e for e in element2text if e[1] == vlt5_caption]
-                    if vlt5_caption_with_score[0][2] > 0.21:
-                      matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][1]} in this picture? || Yes"]
-                    elif random.randint(0,5)==0:
-                      matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][1]} in this picture? || No"]                      
+                    vlt5_caption_with_score = [e for e in element2text.evalues() if e[0] == vlt5_caption]
+                    if vlt5_caption_with_score:
+                      if vlt5_caption_with_score[0][1] > 0.21:
+                        matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
+                      elif random.randint(0,5)==0:
+                        matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]                      
                     out.write(str(matched_output)+"\n")
-                    if False:
+                    if verbose:
+                      print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
                       if 'annotated_image' in vlt5_output['frcnn_output']:
                         display(vlt5_output['frcnn_output']['annotated_image'])
                       else:
                         display(img)
-                    word_str = ", ".join([a[1] for a in element2text if a[2] > 0.20 and a[1] != vlt5_caption])
+                    word_str = ", ".join([a[0] for a in element2text if a[1] > score_cutoff and a[0] != vlt5_caption])
                     if word_str:
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                     min_length=len(word_str.split())*3, 
@@ -299,6 +299,7 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                                                                     no_repeat_ngram_size=2, )
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
+                      generated_sentence = generated_sentence.strip()
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
@@ -309,7 +310,8 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                         matched_output['thumbnail'] = np.array(img).tostring()
                         if matched_output and matched_output['score'] > score_cutoff:
                           out.write(str(matched_output)+"\n")
-                          #print ( matched_output['score'], '**', generated_sentence)
-                          #display(img)                    
+                          if verbose:
+                            print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
+                            display(img)                    
                     dat_cnt += 1
               
