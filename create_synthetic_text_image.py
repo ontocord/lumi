@@ -128,6 +128,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         j = random.randint(0, len(f)-1)
         l = f[j]
         l = l.decode().strip()
+        answer = ""
+        if "||" in l:
+          l, answer = l.split("||",1)
         if "You are visiting the placeholder page" in l: continue
         l_lower = l.lower()
         if l_lower.count("free") + l_lower.count("dating") + l_lower.count("sex") + l_lower.count("fuck") + l_lower.count("cock") + l_lower.count("pussy") + l_lower.count("xxx") > 3: continue  
@@ -286,6 +289,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
+                    if answer:
+                      matched_output['answer'] = answer
+                
                     element2text = matched_output['element2text']
                     vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
                     if vlt5_caption_with_score:
