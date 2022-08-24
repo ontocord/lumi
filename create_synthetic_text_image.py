@@ -1,11 +1,19 @@
 import random
 import spacy
-from .stopwords  import stopwords
-from .indexed_gzip import *
-from .modeling_vlt5 import *
-from .tokenization_vlt5 import *
-from .modeling_dalle import *
-from .utils import *
+import sys, os
+try:
+  sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                           os.path.pardir)))
+except:
+  sys.path.append(os.path.abspath(os.path.join("./",
+                                           os.path.pardir)))
+
+from lumi.stopwords  import stopwords
+from lumi.gush_idx import *
+from lumi.modeling_vlt5 import *
+from lumi.tokenization_vlt5 import *
+from lumi.modeling_dalle import *
+from lumi.utils import *
 from PIL import Image
 import requests
 from transformers import CLIPProcessor, CLIPModel, AutoModel, AutoTokenizer, AutoModelWithLMHead
@@ -111,9 +119,9 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None                    
                     
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, device='cuda'):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
-  init_data(input_en_txt_gz_file, pytorch_device=device)
+  init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
    with IndexedGzipFileExt("en.txt.gz") as f:
       for cnt in tqdm.tqdm(range(max_items)):
@@ -325,10 +333,10 @@ if __name__ == "__main__":
     parser.add_argument('-output_append_to_file', dest='output_append_to_file', type=str, help='File to write image/text data to')
     parser.add_argument('-input_en_txt_gz_file', dest='input_en_txt_gz_file', type=str, help='Input english text file, in .gz format')
     parser.add_argument('-max_items', dest='max_items', type=int, help='Maximum items to create', default=10000)
-    parser.add_argument('-input_en_txt_gz_file', dest='input_en_txt_gz_file', type=str, help='Input english text file, in .gz format')
+    parser.add_argument('-max_img_per_doc', dest='max_img_per_doc', type=int, help='Maximum images to create from one document', default=5)
     parser.add_argument('-score_cutoff', dest='score_cutoff', type=float, help='Cutoff score for image/text matching using CLIP. Usually around .23-.20', default=.2)
     parser.add_argument('-trimmed_text_word_len', dest='trimmed_text_word_len', type=int, help='The approximate number of words per sentence used to generate images', default=50)
-    parser.add_argument('-device', dest='device', type=str, help='the device', default= "cuda")
+    parser.add_argument('-pytorch_device', dest='pytorch_device', type=str, help='the device', default= "cuda")
     
     args = parser.parse_args()
     create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
@@ -338,5 +346,5 @@ if __name__ == "__main__":
                                      max_img_per_doc=args.max_img_per_doc, \
                                      trimmed_text_word_len=args.trimmed_text_word_len, \
                                      verbose=False, \
-                                     device=args.device):
+                                     pytorch_device=args.pytorch_device)
  
