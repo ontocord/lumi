@@ -16,6 +16,7 @@ import json
 import tqdm
 import numpy
 import sys, os
+import argparse
 
 
 try:
@@ -110,10 +111,10 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None                    
                     
-def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
-  init_data(en_txt_gz_file)
-  with open(filename, "w") as out:
+  init_data(input_en_txt_gz_file, pytorch_device=device)
+  with open(output_append_to_file, "a+") as out:
    with IndexedGzipFileExt("en.txt.gz") as f:
       for cnt in tqdm.tqdm(range(max_items)):
         j = random.randint(0, len(f)-1)
@@ -291,6 +292,7 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                         display(vlt5_output['frcnn_output']['annotated_image'])
                       else:
                         display(img)
+                    dat_cnt += 1    
                     word_str = ", ".join([a[0] for a in element2text.values() if a[1] > score_cutoff and a[0] != vlt5_caption])
                     if word_str:
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
@@ -312,6 +314,29 @@ def create_synthetic_text_image_data(filename, en_txt_gz_file, max_items=10000, 
                           out.write(str(matched_output)+"\n")
                           if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
-                            display(img)                    
-                    dat_cnt += 1
+                            display(img)  
+                          dat_cnt += 1
+                    
               
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Image Text Synthetic Data')
+    
+    parser.add_argument('-output_append_to_file', dest='output_append_to_file', type=str, help='File to write image/text data to')
+    parser.add_argument('-input_en_txt_gz_file', dest='input_en_txt_gz_file', type=str, help='Input english text file, in .gz format')
+    parser.add_argument('-max_items', dest='max_items', type=int, help='Maximum items to create', default=10000)
+    parser.add_argument('-input_en_txt_gz_file', dest='input_en_txt_gz_file', type=str, help='Input english text file, in .gz format')
+    parser.add_argument('-score_cutoff', dest='score_cutoff', type=float, help='Cutoff score for image/text matching using CLIP. Usually around .23-.20', default=.2)
+    parser.add_argument('-trimmed_text_word_len', dest='trimmed_text_word_len', type=int, help='The approximate number of words per sentence used to generate images', default=50)
+    parser.add_argument('-device', dest='device', type=str, help='the device', default= "cuda")
+    
+    args = parser.parse_args()
+    create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
+                                     input_en_txt_gz_file=args.input_en_txt_gz_file, \
+                                     max_items=args.max_items, \
+                                     score_cutoff=args.score_cutoff, \
+                                     max_img_per_doc=args.max_img_per_doc, \
+                                     trimmed_text_word_len=args.trimmed_text_word_len, \
+                                     verbose=False, \
+                                     device=args.device):
+ 
