@@ -34,28 +34,46 @@ except:
   minidalle = spacy_nlp = clip_model= clip_processor= stopwords_set= vlt5 = None
   device = 'cuda'
 
+emotion_adj = ["surprised", "angry", "sad", "contemptous", "disgusted", "fearful", "happy"]
+shape_adj = ["near", "far", "large", "small", "medium", "broad", "crooked", \
+             "curved", "deep", "even", "flat", "hilly", "jagged", \
+              "round", "shallow", "square", "steep", "straight", "thick", \
+              "thin", "triangular", "uneven"]
 #TODO improve this with more variety
-def get_person(is_male=True):
+
+def aug_loc(loc_str=""):
+  if loc_str and random.randint(0,1) == 0:
+    loc =  " the " +random.choice(["", "", "", "", ]+shape_adj) + " "
+  else:
+    loc = " the " +random.choice(["", "", "", "", ]+shape_adj) + " " + random.choice(["place", "location", "locale", "site",]) + " "
+  loc =  loc.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return loc
+
+def aug_person(person_str="", is_male=True):
   norp = ""
   norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
+  norp += " " +random.choice(["", "", "", ""] + emotion_adj)
   norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
   norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
   norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
   norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
-  if is_male: 
-    person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
+  if person_str and random.randint(0,1) == 0: 
+    person = "the " + norp + " " person_str
   else:
-    person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
+    if is_male: 
+      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
+    else:
+      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
   return person
 
-def simplify_person(text, all_persons):
-  for person2 in all_persons:
-    person_arr = person2.split()
-    if len(person_arr) > 3:
-      person_arr = [person_arr[0]] + person_arr[-2:]
-    person3 = " ".join(person_arr)
-    text = text.replace(person2, person3)
+def simplify_aug(sentence, all_aug):
+  for el2 in all_aug:
+    el2_arr = el2.split()
+    if len(el2_arr) > 3:
+      el2_arr = [el2_arr[0]] + el2_arr[-2:]
+    el3 = " ".join(el2_arr)
+    sentence = sentence.replace(el2, el3)
   return text
 
 
@@ -168,21 +186,21 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
-        person = get_person(" he " in l or " He " in l)
+        person = get_person(person_str="", is_male=" he " in l or " He " in l)
         person2person = {}
         if person_ner:
           for person_name, _ in person_ner:
             if random.randint(0,2)!=0:
               continue
             if not person:
-              person = get_person(random.randint(0,1)==0)
+              person = get_person(person_str=person_name, is_male=random.randint(0,1)==0)
               continue
             if person_name.endswith("'s"): person_name = person_name[:-2]
             #print ("replacing **", person_name, person)
             person2person[person_name] = person
             l = l.replace(person_name, person, 1)
             person = get_person(random.randint(0,1)==0)
-        person = get_person(" he " in l or " He " in l)
+        person = get_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
         #print (l)
@@ -271,17 +289,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_person((prev_text2+". "+prev_text).strip(" ."), [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), [person]+ list(person2person.values()))
                 else:
-                  prev_text = simplify_person((prev_text2+" "+prev_text).strip(" ."), [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), [person]+ list(person2person.values()))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_person((next_text +". "+next_text2).strip(" ."), [person]+ list(person2person.values()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), [person]+ list(person2person.values()))
                   else:
-                    next_text = simplify_person((next_text +" "+ next_text2).strip(" ."), [person]+ list(person2person.values()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), [person]+ list(person2person.values()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_person(matched_sentence, [person]+ list(person2person.values()))
+                matched_sentence = simplify_aug(matched_sentence, [person]+ list(person2person.values()))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
