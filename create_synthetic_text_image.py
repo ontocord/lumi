@@ -293,13 +293,29 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       matched_output['answer'] = answer
                 
                     element2text = matched_output['element2text']
+                    do_more_vlt5 = False
                     vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
                     if vlt5_caption_with_score:
                       if vlt5_caption_with_score[0][1] > 0.21:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
+                        do_more_vlt5 = True
                       elif random.randint(0,5)==0:
-                        matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]                      
-                    out.write(str(matched_output)+"\n")
+                        matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
+                        do_more_vlt5 = False
+                    if do_more_vlt5:
+                      for element, score in element2text
+                        if not (element.endswith("ed") or element.endswith("es") or element.endswith("ing")):
+                          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is the {element}?",  img, 
+                                        no_repeat_ngram_size=2, max_detections=5)
+                          matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is the {element}?|| {answer}"]                         
+                          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is the {element}?",  img, 
+                                        no_repeat_ngram_size=2, max_detections=5)
+                          matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what color is the {element}?|| {answer}"]  
+                                              out.write(str(matched_output)+"\n")
+                          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is the {element}?",  img, 
+                                        no_repeat_ngram_size=2, max_detections=5)
+                          matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what size is the {element}?|| {answer}"]  
+                                              out.write(str(matched_output)+"\n")                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
                       if 'annotated_image' in vlt5_output['frcnn_output']:
