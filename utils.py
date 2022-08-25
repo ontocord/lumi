@@ -109,7 +109,7 @@ def load_json_like_from_str(s, **kwargs):
           if key in ret:
             ret[key] = np.fromstring(ret[key], dtype=array_spec["dtype"]).reshape(array_spec["shape"])
             if array_spec.get("is_image"):
-             ret[ley] = Image.fromarray(ret[key])
+             ret[key] = Image.fromarray(ret[key])
       return ret
 
 def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
