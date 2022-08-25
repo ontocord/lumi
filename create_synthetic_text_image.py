@@ -311,7 +311,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is the {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
                           matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what color is the {element}?|| {answer}"]  
-                                              out.write(str(matched_output)+"\n")
                           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is the {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
                           matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what size is the {element}?|| {answer}"]  
@@ -336,16 +335,20 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      matched_output = get_decomposed_sent_to_img(generated_sentence, img)
-                      if matched_output:
-                        matched_output['tokens'] = tokens.tostring()
-                        matched_output['thumbnail'] = np.array(img).tostring()
-                        if matched_output and matched_output['score'] > score_cutoff:
-                          out.write(str(matched_output)+"\n")
-                          if verbose:
-                            print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
+                      matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
+                      if matched_output and matched_output['score'] > score_cutoff:
+                        matched_output["element2text2"] = matched_output2["element2text"]
+                        matched_output['matched_sentence2'] = matched_output2["matched_output"]
+                        matched_output['score2'] = matched_output2["score"]
+                        matched_output['decomposed_image_features2'] = matched_output2["decomposed_image_features"]
+                        matched_output['tokens2'] = tokens.tostring()
+                        matched_output['thumbnail2'] = np.array(img).tostring()
+                        out.write(str(matched_output)+"\n")
+                        if verbose:
+                            print ( matched_output2['score'], '**', matched_output2['matched_sentence'], '***', matched_output2['element2text'])
                             display(img)  
-                          dat_cnt += 1
+                         dat_cnt += 1
+                    out.write(str(matched_output)+"\n")
                     
               
 
