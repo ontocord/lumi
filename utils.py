@@ -93,6 +93,22 @@ from torch.nn.functional import cosine_similarity
 import json
 import tqdm
 import numpy
+def load_json_like_from_str(s, **kwargs):
+      if not s.strip(): return None
+      ret = None
+      try:
+        ret = json.loads(s)
+      except:
+        pass
+      if ret is  None: 
+        ret = {'__ret': None}
+        exec("__ret= "+s, ret)
+        ret = ret['__ret']
+      if ret is not None:
+        for key, array_spec in kwargs.items():
+          if key in ret:
+            ret[key] = np.fromstring(ret[key], dtype=array_spec["dtype"]).reshape(array_spec["shape"])
+      return ret
 
 def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
   p = next(clip_model.parameters())
