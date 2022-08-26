@@ -43,20 +43,15 @@ color_adj = ["brown", "black", "blue", "gray", "green", \
              "pink", "purple", "red", "orange", "white", "yellow"]
 #TODO improve this with more variety
 
-def aug_obj(obj_str):
-  adj =  random.choice(["", "", "", "", ]+shape_adj) + " "
-  adj += " "+random.choice(["", "", "", "", ]+color_adj) + " "
-  obj = " the " + adj
-  obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return obj
-
 def aug_loc(loc_str=""):
+  print ('loc', loc_str)
   if loc_str and random.randint(0,1) == 0:
-    loc =  " the " +random.choice(["", "", "", "", ]+shape_adj) + " "
+    loc =  random.choice(["", "", "", "", ]+shape_adj) + " " +random.choice(["", "", "", "", ]+color_adj) + " " + loc_str
   else:
     loc = " the " +random.choice(["", "", "", "", ]+shape_adj) + " " + random.choice(["place", "location", "locale", "site",]) + " "
   loc =  loc.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return loc
+  print ('loc aug', loc)
+  return loc.strip()
 
 def aug_person(person_str="", is_male=True):
   norp = ""
@@ -67,14 +62,14 @@ def aug_person(person_str="", is_male=True):
   norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
   norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
   if person_str and random.randint(0,1) == 0: 
-    person = "the " + norp + " " person_str
+    person = norp + " " + person_str
   else:
     if is_male: 
       person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
     else:
       person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return person
+  return person.strip()
 
 def simplify_aug(sentence, all_aug, all_simplify=[]):
   if type(all_aug) is dict:
@@ -153,39 +148,37 @@ def create_qa_vlt5(matched_output, img, score_cutoff):
   global vlt5, vlt5_tokenizer
   
   element2text = matched_output['element2text']
-  pre_element = ""
+  prev_element = ""
   verb = ""
   for element, score in element2text.values():
     if score < score_cutoff: continue
     if not (element.endswith("ed") or element.endswith("es") or element.endswith("ing")):
       if random.randint(0,1) == 0 and prev_element:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is the {element}?",  img, 
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} in relation to {prev_element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is the {element}?|| {answer}"]    
-       else:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is the {element} in relation to {prev_element}?",  img, 
+        matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is {element} in relation to {prev_element}?|| {answer}"]    
+      else:
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is the {element} in relation to {prev_element}?|| {answer}"]    
+        matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is {element}?|| {answer}"]    
       if verb:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is the {element} doing {verb}?",  img, 
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} doing {verb}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)  
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is the {element} doing {verb}?|| {answer}"]                         
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is the {element}?",  img, 
+        matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is {element} doing {verb}?|| {answer}"]                         
+      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what color is the {element}?|| {answer}"]  
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is the {element}?",  img, 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what color is {element}?|| {answer}"]  
+      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"what size is the {element}?|| {answer}"]  
-                                              out.write(str(matched_output)+"\n")  
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what the {element} feeling?",  img, 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what size is {element}?|| {answer}"]                                        
+      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what {element} feeling?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is the {element} feeling?|| {answer}"]  
-                                              out.write(str(matched_output)+"\n")  
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is the {element} feeling {feeling}?",  img, 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"]  
+      feeling = answer
+      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} feeling {feeling}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is the {element} feeling {feeling}?|| {answer}"]  
-                                              out.write(str(matched_output)+"\n")  
-        pre_element = element
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is {element} feeling {feeling}?|| {answer}"]  
+      prev_element = element
     else:
       verb = element
       
@@ -198,12 +191,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         j = random.randint(0, len(f)-1)
         l = f[j]
         l = l.decode().strip()
-        qa = ""
-        if "? ||" in l:
-          l, answer = l.split("? ||",1)
-          l_arr = l.split(".")
-          l = ".".join(l_arr[:-1])
-          qa = l_arr[-1]+"?|| "+answer
         if "You are visiting the placeholder page" in l: continue
         l_lower = l.lower()
         if l_lower.count("free") + l_lower.count("dating") + l_lower.count("sex") + l_lower.count("fuck") + l_lower.count("cock") + l_lower.count("pussy") + l_lower.count("xxx") > 3: continue  
@@ -218,6 +205,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         shortword_ratio = shortword_cnt/len(trimmed_text)
         if not (stopword_ratio < 0.75 and random.random() < stopword_ratio and random.random() < shortword_ratio):
           continue
+        qa = ""
+        if "? ||" in l:
+          l, answer = l.split("? ||",1)
+          l_arr = l.split(".")
+          l = ".".join(l_arr[:-1])
+          qa = (l_arr[-1]+"?|| "+answer).strip()
         doc = spacy_nlp(l)
         #TODO, detect public figures which we will replace with lower frequency
         
@@ -240,31 +233,33 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
         aug_ner =  {}
-        person2peron {}
+        person2person = {}
         seen = {}
         for e in doc.ents:
-          if e_text.lower() in seen: continue
+          if e.text.lower() in seen: continue
           if random.randint(0,2) != 0: continue
-          aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
-          l = l.replace(e.text, aug_word,1)
-          if e.label_ == 'PERSON':
-            pers2person[aug_word] = e.text
-          else:
-            aug_ner[aug_word] = e.text
-          seen[e.text.lower()] = 1
-          noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
-        for e_text in noun_chunks:
+          if e.label_ not in ('LOC', 'GPE', 'ORG', 'LOCATON', 'PERSON'): continue
+          e_text = []
+          add_rest = False
+          for et in e.text.split():
+            if add_rest or (et.lower() not in stopwords_set):
+              add_rest = True
+              e_text.append(et)
+          e_text = " ".join(e_text)
           if e_text.lower() in seen: continue
-          if random.randint(0,2) != 0: continue
-          aug_word =  aug_obj(e_texttext)
+          aug_word =  aug_person(e_text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e_text)
           l = l.replace(e_text, aug_word,1)
-          aug_ner[aug_word] = e_text
+          if e.label_ == 'PERSON':
+            person2person[aug_word] = e_text
+          else:
+            aug_ner[aug_word] = e_text
           seen[e_text.lower()] = 1
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
         #print (l)
         #l = l.split()
+        orig_l = l
         dat = []
         dat_cnt = 0
         trimmed_text_str_len= trimmed_text_word_len*6
@@ -349,17 +344,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug_ner, [person]+ list(person2person.values()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug_ner, [person]+ list(person2person.values()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug_ner, [person]+ list(person2person.keys()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, aug_ner, [person]+ list(person2person.values()))
+                matched_sentence = simplify_aug(matched_sentence, aug_ner, [person]+ list(person2person.keys()))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
@@ -382,6 +377,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if do_more_vlt5:
                       create_qa_vlt5(matched_output, img, score_cutoff)
                     if verbose:
+                      print ('orig_l', orig_l)
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
                       if 'annotated_image' in vlt5_output['frcnn_output']:
                         display(vlt5_output['frcnn_output']['annotated_image'])
@@ -404,9 +400,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       tokens.dtype = np.int16
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
-                      if matched_output and matched_output['score'] > score_cutoff:
+                      if matched_output2 and matched_output2['score'] > score_cutoff:
                         matched_output["element2text2"] = matched_output2["element2text"]
-                        matched_output['matched_sentence2'] = matched_output2["matched_output"]
+                        matched_output['matched_sentence2'] = matched_output2["matched_sentence"]
                         matched_output['score2'] = matched_output2["score"]
                         matched_output['decomposed_image_features2'] = matched_output2["decomposed_image_features"]
                         matched_output['tokens2'] = tokens.tostring()
@@ -414,7 +410,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         if verbose:
                             print ( matched_output2['score'], '**', matched_output2['matched_sentence'], '***', matched_output2['element2text'])
                             display(img)  
-                         dat_cnt += 1
+                        dat_cnt += 1
                     out.write(str(matched_output)+"\n")
                     
               
