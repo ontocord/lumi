@@ -244,8 +244,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         seen = {}
         for e in doc.ents:
           if e_text.lower() in seen: continue
+          if random.randint(0,2) != 0: continue
           aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
-          l = l.replace(e.text, aug_word)
+          l = l.replace(e.text, aug_word,1)
           if e.label_ == 'PERSON':
             pers2person[aug_word] = e.text
           else:
@@ -254,8 +255,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
         for e_text in noun_chunks:
           if e_text.lower() in seen: continue
+          if random.randint(0,2) != 0: continue
           aug_word =  aug_obj(e_texttext)
-          l = l.replace(e_text, aug_word)
+          l = l.replace(e_text, aug_word,1)
           aug_ner[aug_word] = e_text
           seen[e_text.lower()] = 1
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
