@@ -39,7 +39,16 @@ shape_adj = ["near", "far", "large", "small", "medium", "broad", "crooked", \
              "curved", "deep", "even", "flat", "hilly", "jagged", \
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
+color_adj = ["brown", "black", "blue", "gray", "green", \
+             "pink", "purple", "red", "orange", "white", "yellow"]
 #TODO improve this with more variety
+
+def aug_obj(obj_str):
+  adj =  random.choice(["", "", "", "", ]+shape_adj) + " "
+  adj += " "+random.choice(["", "", "", "", ]+color_adj) + " "
+  obj = " the " + adj
+  obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return obj
 
 def aug_loc(loc_str=""):
   if loc_str and random.randint(0,1) == 0:
@@ -186,21 +195,21 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
-        person = get_person(person_str="", is_male=" he " in l or " He " in l)
+        person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         person2person = {}
         if person_ner:
           for person_name, _ in person_ner:
             if random.randint(0,2)!=0:
               continue
             if not person:
-              person = get_person(person_str=person_name, is_male=random.randint(0,1)==0)
+              person = aug_person(person_str=person_name, is_male=random.randint(0,1)==0)
               continue
             if person_name.endswith("'s"): person_name = person_name[:-2]
             #print ("replacing **", person_name, person)
             person2person[person_name] = person
             l = l.replace(person_name, person, 1)
-            person = get_person(random.randint(0,1)==0)
-        person = get_person(person_str="", is_male=" he " in l or " He " in l)
+            person = aug_person(random.randint(0,1)==0)
+        person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
         #print (l)
@@ -342,6 +351,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     dat_cnt += 1    
                     word_str = ", ".join([a[0] for a in element2text.values() if a[1] > score_cutoff and a[0] != vlt5_caption])
                     if word_str:
+                      
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                     min_length=len(word_str.split())*3, 
                                                                     max_length=len(word_str.split())*10, 
@@ -353,6 +363,13 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
+                      doc = spacy_nlp(generated_sentence)
+                      aug_ner =  []
+                      for word in aug_ner:
+                        aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
+                        generated_sentence = matched_sentence.replace(e.text, aug_word)
+                        aug_ner.append(aug_word)
+                      generated_sentence = simplify_aug(generated_sentence, aug_ner)
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output["element2text2"] = matched_output2["element2text"]
