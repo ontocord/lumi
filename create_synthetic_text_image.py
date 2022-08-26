@@ -76,12 +76,11 @@ def aug_person(person_str="", is_male=True):
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
   return person
 
-def simplify_aug(sentence, all_aug):
+def simplify_aug(sentence, all_aug, all_simplify=[]):
   if type(all_aug) is dict:
     for key, val in all_aug.items():
       sentence = sentence.replace(key, val)
-  else:    
-    for el2 in all_aug:
+  for el2 in all_simplify:
       el2_arr = el2.split()
       if len(el2_arr) > 3:
         el2_arr = [el2_arr[0]] + el2_arr[-2:]
@@ -150,13 +149,14 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None                    
 
-def create_qa_vlt5(matched_output, img):
+def create_qa_vlt5(matched_output, img, score_cutoff):
   global vlt5, vlt5_tokenizer
   
-  element2text = matched_output['matched_output']
+  element2text = matched_output['element2text']
   pre_element = ""
   verb = ""
-  for element, score in element2text
+  for element, score in element2text.values():
+    if score < score_cutoff: continue
     if not (element.endswith("ed") or element.endswith("es") or element.endswith("ing")):
       if random.randint(0,1) == 0 and prev_element:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is the {element}?",  img, 
@@ -220,8 +220,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           continue
         doc = spacy_nlp(l)
         #TODO, detect public figures which we will replace with lower frequency
-        person_ner =  list(set([(e.text, e.label_) for e in doc.ents if e.label_ == 'PERSON']))
-        #print (person_ner)
         
         #gender swap to balance out the dataset
         if ("men " in l or " Men " in l or "men's " in l or " Men's " in l) and random.randint(0, 2) == 0:
@@ -241,22 +239,27 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
+        aug_ner =  {}
+        person2peron {}
+        seen = {}
+        for e in doc.ents:
+          if e_text.lower() in seen: continue
+          aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
+          l = l.replace(e.text, aug_word)
+          if e.label_ == 'PERSON':
+            pers2person[aug_word] = e.text
+          else:
+            aug_ner[aug_word] = e.text
+          seen[e.text.lower()] = 1
+          noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
+        for e_text in noun_chunks:
+          if e_text.lower() in seen: continue
+          aug_word =  aug_obj(e_texttext)
+          l = l.replace(e_text, aug_word)
+          aug_ner[aug_word] = e_text
+          seen[e_text.lower()] = 1
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
-        person2person = {}
-        if person_ner:
-          for person_name, _ in person_ner:
-            if random.randint(0,2)!=0:
-              continue
-            if not person:
-              person = aug_person(person_str=person_name, is_male=random.randint(0,1)==0)
-              continue
-            if person_name.endswith("'s"): person_name = person_name[:-2]
-            #print ("replacing **", person_name, person)
-            person2person[person_name] = person
-            l = l.replace(person_name, person, 1)
-            person = aug_person(random.randint(0,1)==0)
-        person = aug_person(person_str="", is_male=" he " in l or " He " in l)
-        l = l.replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
+        l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
         #print (l)
         #l = l.split()
@@ -344,17 +347,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.values()))
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), [person]+ list(person2person.values()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.values()))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), [person]+ list(person2person.values()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug_ner, [person]+ list(person2person.values()))
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), [person]+ list(person2person.values()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug_ner, [person]+ list(person2person.values()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, [person]+ list(person2person.values()))
+                matched_sentence = simplify_aug(matched_sentence, aug_ner, [person]+ list(person2person.values()))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
@@ -375,7 +378,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
                         do_more_vlt5 = False
                     if do_more_vlt5:
-                      create_qa_vlt5(matched_output, img)
+                      create_qa_vlt5(matched_output, img, score_cutoff)
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'])
                       if 'annotated_image' in vlt5_output['frcnn_output']:
@@ -383,7 +386,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       else:
                         display(img)
                     dat_cnt += 1    
-                    word_str = ", ".join([a[0] for a in element2text.values() if a[1] > score_cutoff and a[0] != vlt5_caption])
+                    word_str = ", ".join([a[0] for a in element2text.values() if a[1] >= score_cutoff and a[0] != vlt5_caption])
                     if word_str:
                       
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
@@ -393,22 +396,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
-                      doc = spacy_nlp(generated_sentence)
-                      aug_ner =  {}
-                      seen = {}
-                      for e in doc.ents:
-                        if e_text.lower() in seen: continue
-                        aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
-                        generated_sentence = generated_sentence.replace(e.text, aug_word)
-                        aug_ner[aug_word] = e.text
-                        seen[e.text.lower()] = 1
-                      noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
-                      for e_text in noun_chunks:
-                        if e_text.lower() in seen: continue
-                        aug_word =  aug_obj(e_texttext)
-                        generated_sentence = generated_sentence.replace(e_text, aug_word)
-                        aug_ner[aug_word] = e_text
-                        seen[e_text.lower()] = 1
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
