@@ -150,37 +150,44 @@ def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
   prev_element = ""
   verb = ""
   for element, score in reversed(list(element2text.values())):
-    if  (element.endswith("ed") or element.endswith("es") or element.endswith("ing")):
+    if  (element.endswith("ed") or element.endswith("s") or element.endswith("ing")):
       verb = element
     elif score >= score_cutoff: 
+      if random.randint(0,3) == 0 or element[0] == element[0].upper():
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the back of {element}?",  img, 
+                                        no_repeat_ngram_size=2, max_detections=5)["text"]
+        if answer not in ("true", "false", "yes", "no"): 
+          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the back of {element}?|| {answer}"]    
       if random.randint(0,1) == 0 and prev_element:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} in relation to {prev_element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)["text"]
-        if answer not in ("yes", "no"): 
+        if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is {element} in relation to {prev_element}?|| {answer}"]    
       else:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)["text"]
-        if answer not in ("yes", "no"): 
+        if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is {element}?|| {answer}"]    
-      if verb and random.randint(0,3) == 0 :
+      if verb and random.randint(0,3) == 0 or element[0] == element[0].upper():
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} doing {verb}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)  ["text"]
-        if answer not in ("yes", "no"): 
+        if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is {element} doing {verb}?|| {answer}"]                         
-      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img, 
+      if random.randint(0,3) == 0 or element[0] == element[0].upper():
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5) ["text"]
-      if answer not in ("yes", "no"): 
-        if answer not in ("white", "black") or random.randint(0,3) == 0:
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"vqa: what color is {element}?|| {answer}"]  
-      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is {element}?",  img, 
+        if answer not in ("true", "false", "yes", "no"): 
+          if answer not in ("white", "black") or random.randint(0,3) == 0:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [f"what color is {element}?|| {answer}"]  
+      if random.randint(0,3) == 0 or element[0] == element[0].upper():
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what size is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5) ["text"]
-      if answer not in ("yes", "no"): 
+        if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what size is {element}?|| {answer}"]                                        
       if element.lower() in persons:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} feeling?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5) ["text"]
-        if answer not in ("yes", "no"): 
+        if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"]  
       prev_element = element
       
@@ -419,12 +426,13 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
+                      orig_generated_sentence = generated_sentence
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
-                        if do_more_vlt5:
+                        if do_more_vlt5 or generated_sentence != orig_generated_sentence or random.randint(0,3) == 0:
                           create_qa_vlt5(matched_output, img, score_cutoff, list(person2person.values()))
                         if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
