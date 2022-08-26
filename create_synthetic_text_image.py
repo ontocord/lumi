@@ -77,13 +77,17 @@ def aug_person(person_str="", is_male=True):
   return person
 
 def simplify_aug(sentence, all_aug):
-  for el2 in all_aug:
-    el2_arr = el2.split()
-    if len(el2_arr) > 3:
-      el2_arr = [el2_arr[0]] + el2_arr[-2:]
-    el3 = " ".join(el2_arr)
-    sentence = sentence.replace(el2, el3)
-  return text
+  if type(all_aug) is dict:
+    for key, val in all_aug.items():
+      sentence = sentence.replace(key, val)
+  else:    
+    for el2 in all_aug:
+      el2_arr = el2.split()
+      if len(el2_arr) > 3:
+        el2_arr = [el2_arr[0]] + el2_arr[-2:]
+      el3 = " ".join(el2_arr)
+      sentence = sentence.replace(el2, el3)
+  return sentence
 
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
@@ -389,16 +393,26 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
+                      doc = spacy_nlp(generated_sentence)
+                      aug_ner =  {}
+                      seen = {}
+                      for e in doc.ents:
+                        if e_text.lower() in seen: continue
+                        aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
+                        generated_sentence = generated_sentence.replace(e.text, aug_word)
+                        aug_ner[aug_word] = e.text
+                        seen[e.text.lower()] = 1
+                      noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
+                      for e_text in noun_chunks:
+                        if e_text.lower() in seen: continue
+                        aug_word =  aug_obj(e_texttext)
+                        generated_sentence = generated_sentence.replace(e_text, aug_word)
+                        aug_ner[aug_word] = e_text
+                        seen[e_text.lower()] = 1
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      doc = spacy_nlp(generated_sentence)
-                      aug_ner =  []
-                      for e in doc.ents:
-                        aug_word =  aug_person(e.text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_loc(e.text) if e.label_ == 'LOC' else aug_obj(e.text)  if e.label_ not in ("CARDINAL", "DATE") else e.text
-                        generated_sentence = matched_sentence.replace(e.text, aug_word)
-                        aug_ner.append(aug_word)
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
