@@ -422,7 +422,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
-                       matched_output['tokens'] = tokens.tostring()
+                        matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
                         if do_more_vlt5:
                           create_qa_vlt5(matched_output, img, score_cutoff, list(person2person.values()))
