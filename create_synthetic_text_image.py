@@ -149,7 +149,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
   element2text = matched_output['element2text']
   prev_element = ""
   verb = ""
-  for element, score in reversed(element2text.values()):
+  for element, score in reversed(list(element2text.values())):
     if  (element.endswith("ed") or element.endswith("es") or element.endswith("ing")):
       verb = element
     elif score >= score_cutoff: 
