@@ -375,15 +375,13 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if qa:
                       matched_output['qa'] = matched_output.get('qa',[]) + qa
                     element2text = matched_output['element2text']
-                    do_more_vlt5 = False
                     vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
                     if vlt5_caption_with_score:
-                      if vlt5_caption_with_score[0][1] > 0.21:
+                      if vlt5_caption_with_score[0][1] > score_cutoff:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
-                        do_more_vlt5 = True
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
-                        do_more_vlt5 = False
+                        
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
                       if 'annotated_image' in vlt5_output['frcnn_output']:
@@ -428,16 +426,33 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       tokens.dtype = np.int16
                       orig_generated_sentence = generated_sentence
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
-                      matched_output = get_decomposed_sent_to_img(generated_sentence, img)
+                      
+                      matched_output = get_decomposed_sent_to_img(generated_sentence, img, [vlt5_caption])
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
-                        if do_more_vlt5 or generated_sentence != orig_generated_sentence or random.randint(0,3) == 0:
-                          create_qa_vlt5(matched_output, img, score_cutoff, list(person2person.values()))
+                        vlt5_output = vlt5_image2text(vlt5, vlt5_tokenizer, "caption:",  img,
+                                    min_length=max(4, len(generated_sentence.split())-10),  
+                                    max_length=4+len(generated_sentence.split())*10, 
+                                    no_repeat_ngram_size=2, max_detections=5)
+                        vlt5_caption = vlt5_output['text'].strip(".").replace("..", ".").replace("..", ".")
+                        if "." in vlt5_caption:
+                          vlt5_caption, _ = vlt5_caption.split(".",1)
+                        vlt5_caption = " ".join([e for e in vlt5_caption.split() if len(e) <= 10])
+                        vlt5_caption = vlt5_caption.replace("painting of ", "").replace("photograph of ", "").replace("photo of ", "").replace("picture of ", "").replace("photo of ", "").replace("drawing of ", "").replace("illusration of ", "")
+                        vlt5_caption = vlt5_caption.replace("of the painting", "").replace("of the photograph", "").replace("of the photo", "").replace("of the picture", "").replace("of the photo", "").replace("of the drawing", "").replace("of the illusration", "")
+                        vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
+                        if vlt5_caption_with_score:
+                          if vlt5_caption_with_score[0][1] > score_cutoff:
+                            matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
+                          elif random.randint(0,5)==0:
+                            matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
+                        create_qa_vlt5(matched_output, img, score_cutoff, list(person2person.values()))
                         if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
                             display(img)  
                         dat_cnt += 1
+                        matched_output["is_generated"] = 1
                         out.write(str(matched_output)+"\n")
                     
               
