@@ -42,7 +42,7 @@ from .utils import *
   
 #function to generate some text from the model, given a prompt and an image 
 def vlt5_image2text(model, tokenizer, prompt, img, no_repeat_ngram_size=2, **kwargs):
-    kwargs['no_repeat_ngram_size'= no_repeat_ngram_size
+    kwargs['no_repeat_ngram_size'] = no_repeat_ngram_size
     if 'max_detections' in kwargs:
         max_detections = kwargs['max_detections']
         del kwargs['max_detections']
