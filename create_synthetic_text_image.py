@@ -1,4 +1,5 @@
 import random
+from sentence_transformers.evaluation.SentenceEvaluator import SentenceEvaluator
 import spacy
 import sys, os
 try:
@@ -44,49 +45,6 @@ color_adj = ["brown", "black", "blue", "gray", "green", \
 #TODO improve this with more variety
 
 
-def aug_obj(obj_str):
-  obj =  " " +random.choice(["", "", "", "", "", "", "", "", ]+color_adj) + " " + obj_str
-  obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return obj.strip()
-
-def aug_non_person(loc_str=""):
-  if loc_str and random.randint(0,3) != 0:
-    loc =  random.choice(["", "", "", "", ]+shape_adj) + " " +random.choice(["", "", "", "", ]+color_adj) + " " + loc_str
-  else:
-    loc = " the " +random.choice(["", "", "", "", ]+shape_adj) + " " + random.choice(["place", "location", "locale", "site",]) + " "
-  loc =  loc.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return loc.strip()
-
-def aug_person(person_str="", is_male=True):
-  norp = ""
-  norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
-  norp += " " +random.choice(["", "", "", ""] + emotion_adj)
-  norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
-  norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
-  norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
-  norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
-  if person_str and random.randint(0,1) == 0: 
-    person = norp + " " + person_str
-  else:
-    if is_male: 
-      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
-    else:
-      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
-  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
-  return person.strip()
-
-def simplify_aug(sentence, all_aug, all_simplify=[]):
-  if type(all_aug) is dict:
-    for key, val in all_aug.items():
-      sentence = sentence.replace(key, val)
-  for el2 in all_simplify:
-      el2_arr = el2.split()
-      if len(el2_arr) > 3:
-        el2_arr = [el2_arr[0]] + el2_arr[-2:]
-      el3 = " ".join(el2_arr)
-      sentence = sentence.replace(el2, el3)
-  return sentence
-
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
@@ -119,6 +77,49 @@ def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
       os.system(f"cp {en_txt_gz_file} ./en.txt.gz")
     IndexedGzipFileExt("en.txt.gz") 
 
+def aug_obj(obj_str):
+  obj =  " " +random.choice(["", "", "", "", "", "", "", "", ]+color_adj) + " " + obj_str
+  obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return obj.strip()
+
+def aug_loc(loc_str=""):
+  if loc_str and random.randint(0,3) != 0:
+    loc =  random.choice(["", "", "", "", ]+shape_adj) + " " +random.choice(["", "", "", "", ]+color_adj) + " " + loc_str
+  else:
+    loc = loc_str +", the " +random.choice(["", "", "", "", ]+shape_adj) + " " + random.choice(["place", "location", "locale", "site",]) + " "
+  loc =  loc.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return loc.strip()
+
+def aug_person(person_str="", is_male=True):
+  norp = ""
+  norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
+  norp += " " +random.choice(["", "", "", ""] + emotion_adj)
+  norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
+  norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
+  norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
+  norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
+  if person_str and random.randint(0,1) == 0: 
+    person = norp + " " + person_str
+  else:
+    if is_male: 
+      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
+    else:
+      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
+  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return person.strip()
+
+def simplify_aug(sentence, all_aug, all_simplify=[]):
+  for el2 in all_simplify:
+      el2_arr = el2.split()
+      if len(el2_arr) > 3:
+        el2_arr = [el2_arr[0]] + el2_arr[-2:]
+      el3 = " ".join(el2_arr)
+      sentence = sentence.replace(el2, el3)
+  if type(all_aug) is dict:
+    for key, val in all_aug.items():
+      sentence = sentence.replace(key, val)
+  return sentence
+
 def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
@@ -146,7 +147,40 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'element2text': clip_output['element2text'], \
                               'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(), }
       return matched_output
-  return None                    
+  return None     
+
+def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33):
+  global spacy_nlp
+  ent2ner =  {}
+  person2person = {}
+  seen = {}
+  doc = spacy_nlp(doc)
+  ents = [(a.text, e.label_) for e in doc.ents]
+  if do_obj: 
+    ents += [(e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", ""), 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
+  for e_text, e_label in list(set(ents)):
+    if e_text.lower() in seen: continue
+    if random.random() > prob_of_swap: continue
+    e_text2 = []
+    add_rest = False
+    for et in e_text.split():
+      if add_rest or (et.lower() not in stopwords_set):
+        add_rest = True
+        e_text2.append(et)
+      e_text = " ".join(e_text2)
+      if e_text.lower() in seen: continue
+      if e_label_  in ('LOC', 'GPE', 'FAC',):
+        aug_word =   aug_loc(e_text)
+      elif e_label_ in ('PERSON',):
+        aug_word =  aug_person(e_text, random.randint(0,1))
+      elif e_label_ in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ'):
+        aug_word =  aug_obj(e_text)
+      l = l.replace(e_text, aug_word,1)
+      if e.label_ == 'PERSON':
+        person2person[aug_word] = e_text
+      ent2ner[aug_word] = e_text
+      seen[e_text.lower()] = 1
+    return l, aug_ner, aug_person
 
 def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
   global vlt5, vlt5_tokenizer
@@ -231,7 +265,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           l_arr = l.split(".")
           l = ".".join(l_arr[:-1])
           qa = (l_arr[-1]+"?|| "+answer).strip()
-        doc = spacy_nlp(l)
         #TODO, detect public figures which we will replace with lower frequency
         
         #gender swap to balance out the dataset
@@ -252,28 +285,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
-        aug_ner =  {}
-        person2person = {}
-        seen = {}
-        for e in doc.ents:
-          if e.text.lower() in seen: continue
-          if random.randint(0,2) != 0: continue
-          if e.label_ not in ('LOC', 'GPE', 'FAC', 'PERSON'): continue
-          e_text = []
-          add_rest = False
-          for et in e.text.split():
-            if add_rest or (et.lower() not in stopwords_set):
-              add_rest = True
-              e_text.append(et)
-          e_text = " ".join(e_text)
-          if e_text.lower() in seen: continue
-          aug_word =  aug_person(e_text, random.randint(0,1)) if e.label_ == 'PERSON' else aug_non_person(e_text)
-          l = l.replace(e_text, aug_word,1)
-          if e.label_ == 'PERSON':
-            person2person[aug_word] = e_text
-          else:
-            aug_ner[aug_word] = e_text
-          seen[e_text.lower()] = 1
+        
+        #augment the sentence with fake data
+        l, ent2ner, person2person = augment_ents(l, do_person=True, do_loc=True, do_obj=False)
+        
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
@@ -365,14 +380,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug_ner, [person]+ list(person2person.keys()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug_ner, [person]+ list(person2person.keys()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), ent2ner, [person]+ list(person2person.keys()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
                 matched_sentence = simplify_aug(matched_sentence, aug_ner, [person]+ list(person2person.keys()))
@@ -411,31 +426,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
-                      doc = spacy_nlp(generated_sentence)
-                      aug_ner =  {}
-                      seen = {}
                       
-                      for e_text in [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]:
-                        if e_text.lower() in seen: continue
-                        if random.randint(0,2) != 0: continue
-                        e_text2 = []
-                        add_rest = False
-                        for et in e_text.split():
-                          if add_rest or (et.lower() not in stopwords_set):
-                            add_rest = True
-                            e_text2.append(et)
-                        e_text = " ".join(e_text2)
-                        if e_text.lower() in seen: continue
-                        aug_word =   aug_non_person(e_text)
-                        generated_sentence = generated_sentence.replace(e_text, aug_word,1)
-                        aug_ner[aug_word] = e_text
-                        seen[e_text.lower()] = 1
+                      #augment the sentence with fake data
+                      generated_sentence, ent2ner, person2person = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
+                      
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
                       orig_generated_sentence = generated_sentence
-                      generated_sentence = simplify_aug(generated_sentence, aug_ner)
+
+                      generated_sentence = simplify_aug(generated_sentence, ent2ner)
                       vlt5_output = vlt5_image2text(vlt5, vlt5_tokenizer, "caption:",  img,
                                     min_length=max(4, len(generated_sentence.split())-10),  
                                     max_length=4+len(generated_sentence.split())*10, 
@@ -446,7 +447,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       vlt5_caption = " ".join([e for e in vlt5_caption.split() if len(e) <= 10])
                       vlt5_caption = vlt5_caption.replace("painting of ", "").replace("photograph of ", "").replace("photo of ", "").replace("picture of ", "").replace("photo of ", "").replace("drawing of ", "").replace("illusration of ", "")
                       vlt5_caption = vlt5_caption.replace("of the painting", "").replace("of the photograph", "").replace("of the photo", "").replace("of the picture", "").replace("of the photo", "").replace("of the drawing", "").replace("of the illusration", "")
-                      print ("generated augmented", generated_sentence, aug_ner)
+                      print ("generated augmented", orig_generated_sentence, ent2ner)
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img, [vlt5_caption])
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
