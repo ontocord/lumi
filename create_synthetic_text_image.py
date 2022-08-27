@@ -154,11 +154,12 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
   ent2ner =  {}
   person2person = {}
   seen = {}
-  doc = spacy_nlp(doc)
-  ents = [(a.text, e.label_) for e in doc.ents]
+  doc = spacy_nlp(l)
+  ents = [(e.text, e.label_) for e in doc.ents]
   if do_obj: 
     ents += [(e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", ""), 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
   for e_text, e_label in list(set(ents)):
+    if not e_text.strip(): continue
     if e_text.lower() in seen: continue
     if random.random() > prob_of_swap: continue
     e_text2 = []
@@ -167,20 +168,23 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
       if add_rest or (et.lower() not in stopwords_set):
         add_rest = True
         e_text2.append(et)
-      e_text = " ".join(e_text2)
-      if e_text.lower() in seen: continue
-      if e_label_  in ('LOC', 'GPE', 'FAC',):
+    e_text = " ".join(e_text2)
+    if not e_text.strip(): continue
+    if e_text.lower() in seen: continue
+    if e_label  in ('LOC', 'GPE', 'FAC',) and do_loc:
         aug_word =   aug_loc(e_text)
-      elif e_label_ in ('PERSON',):
+    elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
-      elif e_label_ in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ'):
+    elif e_label in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ') and do_obj:
         aug_word =  aug_obj(e_text)
-      l = l.replace(e_text, aug_word,1)
-      if e.label_ == 'PERSON':
+    else:
+        aug_word = e_text
+    l = l.replace(e_text, aug_word,1)
+    if e_label == 'PERSON':
         person2person[aug_word] = e_text
-      ent2ner[aug_word] = e_text
-      seen[e_text.lower()] = 1
-    return l, aug_ner, aug_person
+    ent2ner[aug_word] = e_text
+    seen[e_text.lower()] = 1
+  return l, ent2ner, person2person
 
 def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
   global vlt5, vlt5_tokenizer
@@ -390,7 +394,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), ent2ner, [person]+ list(person2person.keys()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, aug_ner, [person]+ list(person2person.keys()))
+                matched_sentence = simplify_aug(matched_sentence, ent2ner, [person]+ list(person2person.keys()))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
