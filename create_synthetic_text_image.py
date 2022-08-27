@@ -44,6 +44,11 @@ color_adj = ["brown", "black", "blue", "gray", "green", \
 #TODO improve this with more variety
 
 
+def aug_obj(obj_str):
+  obj =  " " +random.choice(["", "", "", "", "", "", "", "", ]+color_adj) + " " + obj_str
+  obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  return obj.strip()
+
 def aug_non_person(loc_str=""):
   if loc_str and random.randint(0,3) != 0:
     loc =  random.choice(["", "", "", "", ]+shape_adj) + " " +random.choice(["", "", "", "", ]+color_adj) + " " + loc_str
@@ -117,10 +122,10 @@ def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
 def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
-  noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks]
+  noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
   ner_and_verbs = dict([(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5], e.text) for e in doc.ents if len(e.text) > 4] + \
                            [(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5], e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
-                           [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks if len(e) > 4]) 
+                           [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
   text4 = list(set(list(ner_and_verbs.values()))) + other_sent_arr
   if False: #to get ony longest subsuming text
     text5 = []
@@ -168,11 +173,17 @@ def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
                                         no_repeat_ngram_size=2, max_detections=5)["text"]
         if answer not in ("true", "false", "yes", "no"): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"where is {element}?|| {answer}"]    
-      if verb and random.randint(0,3) == 0 or element[0] == element[0].upper():
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} doing {verb}?",  img, 
+      if verb and (random.randint(0,3) == 0 or element[0] == element[0].upper()):
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing {verb}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5)  ["text"]
         if answer not in ("true", "false", "yes", "no"): 
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is {element} doing {verb}?|| {answer}"]                         
+          matched_output['qa'] = matched_output.get('qa',[]) +  [f"why is {element} doing {verb}?|| {answer}"]  
+      else:
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img, 
+                                        no_repeat_ngram_size=2, max_detections=5)["text"]
+        if answer not in ("true", "false", "yes", "no"): 
+          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} doing?|| {answer}"]    
+
       if random.randint(0,3) == 0 or element[0] == element[0].upper():
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img, 
                                         no_repeat_ngram_size=2, max_detections=5) ["text"]
@@ -403,44 +414,43 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       doc = spacy_nlp(generated_sentence)
                       aug_ner =  {}
                       seen = {}
-                      for e in doc.ents:
-                        if e.text.lower() in seen: continue
+                      
+                      for e_text in [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]:
+                        if e_text.lower() in seen: continue
                         if random.randint(0,2) != 0: continue
-                        if e.label_ not in ( 'PRODUCT', 'EVENT', 'WORK_OF_ART', 'ORG', 'LOC', 'GPE', 'FAC',): continue
-                        e_text = []
+                        e_text2 = []
                         add_rest = False
-                        for et in e.text.split():
+                        for et in e_text.split():
                           if add_rest or (et.lower() not in stopwords_set):
                             add_rest = True
-                            e_text.append(et)
-                        e_text = " ".join(e_text)
+                            e_text2.append(et)
+                        e_text = " ".join(e_text2)
                         if e_text.lower() in seen: continue
                         aug_word =   aug_non_person(e_text)
                         generated_sentence = generated_sentence.replace(e_text, aug_word,1)
                         aug_ner[aug_word] = e_text
                         seen[e_text.lower()] = 1
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
-                      print ("generated augmented", generated_sentence)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
                       orig_generated_sentence = generated_sentence
                       generated_sentence = simplify_aug(generated_sentence, aug_ner)
-                      
+                      vlt5_output = vlt5_image2text(vlt5, vlt5_tokenizer, "caption:",  img,
+                                    min_length=max(4, len(generated_sentence.split())-10),  
+                                    max_length=4+len(generated_sentence.split())*10, 
+                                    no_repeat_ngram_size=2, max_detections=5)
+                      vlt5_caption = vlt5_output['text'].strip(".").replace("..", ".").replace("..", ".")
+                      if "." in vlt5_caption:
+                          vlt5_caption, _ = vlt5_caption.split(".",1)
+                      vlt5_caption = " ".join([e for e in vlt5_caption.split() if len(e) <= 10])
+                      vlt5_caption = vlt5_caption.replace("painting of ", "").replace("photograph of ", "").replace("photo of ", "").replace("picture of ", "").replace("photo of ", "").replace("drawing of ", "").replace("illusration of ", "")
+                      vlt5_caption = vlt5_caption.replace("of the painting", "").replace("of the photograph", "").replace("of the photo", "").replace("of the picture", "").replace("of the photo", "").replace("of the drawing", "").replace("of the illusration", "")
+                      print ("generated augmented", generated_sentence, aug_ner)
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img, [vlt5_caption])
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
-                        vlt5_output = vlt5_image2text(vlt5, vlt5_tokenizer, "caption:",  img,
-                                    min_length=max(4, len(generated_sentence.split())-10),  
-                                    max_length=4+len(generated_sentence.split())*10, 
-                                    no_repeat_ngram_size=2, max_detections=5)
-                        vlt5_caption = vlt5_output['text'].strip(".").replace("..", ".").replace("..", ".")
-                        if "." in vlt5_caption:
-                          vlt5_caption, _ = vlt5_caption.split(".",1)
-                        vlt5_caption = " ".join([e for e in vlt5_caption.split() if len(e) <= 10])
-                        vlt5_caption = vlt5_caption.replace("painting of ", "").replace("photograph of ", "").replace("photo of ", "").replace("picture of ", "").replace("photo of ", "").replace("drawing of ", "").replace("illusration of ", "")
-                        vlt5_caption = vlt5_caption.replace("of the painting", "").replace("of the photograph", "").replace("of the photo", "").replace("of the picture", "").replace("of the photo", "").replace("of the drawing", "").replace("of the illusration", "")
                         vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
                         if vlt5_caption_with_score:
                           if vlt5_caption_with_score[0][1] > score_cutoff:
