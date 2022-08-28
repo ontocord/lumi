@@ -336,7 +336,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
               vlt5_output = vlt5_image2text(vlt5, vlt5_tokenizer, "caption:",  img, annotated_image=True,
                                     min_length=max(4, len(trimmed_text.split())-10),  
                                     max_length=4+len(trimmed_text.split())*10, 
-                                    no_repeat_ngram_size=2, max_detections=5)
+                                    no_repeat_ngram_size=2)
               vlt5_caption = vlt5_output['text'].strip(".").replace("..", ".").replace("..", ".")
               if "." in vlt5_caption:
                 vlt5_caption, _ = vlt5_caption.split(".",1)
