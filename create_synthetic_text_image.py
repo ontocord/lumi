@@ -36,12 +36,15 @@ except:
   device = 'cuda'
 
 emotion_adj = ["surprised", "angry", "sad", "contemptous", "disgusted", "fearful", "happy"]
+emotion_adj_set = set(emotion_adj)
 shape_adj = ["near", "far", "large", "small", "medium", "tall", "broad", "crooked", \
              "curved", "deep", "even", "flat", "hilly", "jagged", \
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
+shape_adj_set = set(shape_adj)
 color_adj = ["brown", "black", "blue", "gray", "green", \
              "pink", "purple", "red", "orange", "white", "yellow"]
+color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
 
@@ -186,8 +189,12 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
     seen[e_text.lower()] = 1
   return l, ent2ner, person2person
 
-def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
+def create_qa_vlt5(matched_output, img, score_cutoff, ent2ner, persons=[]):
   global vlt5, vlt5_tokenizer
+  ents = set(itertools.chain(*[a.lower().split() for a in ent2ner.keys()]))
+  has_color = any(a in color_adj_set for a in ents)
+  has_shape = any(a in shape_adj_set for a in ents)
+  has_emotion = any(a in emotion_adj_set for a in ents)
   persons = set(itertools.chain(*[a.lower().split() for a in persons]))
   print ('persons', persons)
   element2text = matched_output['element2text']
@@ -216,11 +223,15 @@ def create_qa_vlt5(matched_output, img, score_cutoff, persons=[]):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element}?|| {answer}"]    
-      if random.randint(0,3) == 0 or element[0] == element[0].upper():
+      if has_color or random.randint(0,3) == 0 or element[0] == element[0].upper():
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what color is {element}?|| {answer}"]  
-      if element[0] == element[0].upper() or any(a.lower() in  persons for a in element.split()):
+      if has_shape:
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img) ["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what shape is {element}?|| {answer}"]  
+      if has_emotion or element[0] == element[0].upper() or any(a.lower() in  persons for a in element.split()):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} feeling?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,5)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"]  
