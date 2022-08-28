@@ -475,7 +475,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       
                       #augment the sentence with fake data
                       image_type = random.choice(["", "",  "", "", "",  "", "rendering of :", "vector art of: ", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
-                      if not ("rendering" in image_type "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
+                      if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
                         mult = 1.0
                         generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                       else:
