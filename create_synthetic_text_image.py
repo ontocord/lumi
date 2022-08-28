@@ -155,7 +155,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     for aug_word in other_person_list:
       aug_word_arr = aug_word.split()
       if len(aug_word_arr) > 3:
-          aug_word2 = = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
+          aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
   return l, aug2ent
 
