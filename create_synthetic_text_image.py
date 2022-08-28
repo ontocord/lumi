@@ -432,11 +432,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                                                     min_length=len(word_str.split())*3, 
                                                                     max_length=len(word_str.split())*10, 
                                                                     no_repeat_ngram_size=2, )
-                      l_lower = generated_sentence.lower()
-                      if l_lower.count("sex") + l_lower.count("fuck") + l_lower.count("cock") + l_lower.count("pussy") + l_lower.count("xxx") > 1: continue  
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
+                      l_lower = generated_sentence.lower()
+                      if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
                       
                       #augment the sentence with fake data
                       generated_sentence, aug2ent, person2person = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
