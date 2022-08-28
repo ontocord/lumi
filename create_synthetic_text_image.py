@@ -112,13 +112,7 @@ def aug_person(person_str="", is_male=True):
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
   return person.strip()
 
-def simplify_aug(sentence, all_aug, all_simplify=[]):
-  for el2 in all_simplify:
-      el2_arr = el2.split()
-      if len(el2_arr) > 3:
-        el2_arr = [el2_arr[0]] + el2_arr[-2:]
-      el3 = " ".join(el2_arr)
-      sentence = sentence.replace(el2, el3)
+def simplify_aug(sentence, all_aug):
   if type(all_aug) is dict:
     for key, val in all_aug.items():
       sentence = sentence.replace(key, val)
@@ -162,10 +156,9 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None     
 
-def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33):
+def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=True, prob_of_swap=.33):
   global spacy_nlp
   aug2ent =  {}
-  person2person = {}
   seen = {}
   doc = spacy_nlp(l)
   ents = [(e.text, e.label_) for e in doc.ents]
@@ -187,11 +180,14 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
     else:
         aug_word = e_text
     l = l.replace(e_text, aug_word,1)
-    if e_label == 'PERSON':
-        person2person[aug_word] = e_text
     aug2ent[aug_word] = e_text
+    if e_label == 'PERSON' and simplify_person:
+        aug_word_arr = aug_word.split()
+        if len(aug_word_arr) > 3:
+          aug_word2 = aug_word_arr[0]+" " + " ".join(aug_word_arr[-2:])
+          aug2ent[aug_word] = aug_word2
     seen[e_text.lower()] = 1
-  return l, aug2ent, person2person
+  return l, aug2ent
 
 def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
   global vlt5, vlt5_tokenizer
@@ -220,7 +216,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
       matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in this picture?|| {answer}"]    
       
   for element, score in reversed(list(element2text.values())):
-    if score >= score_cutoff: 
+    if score >= score_cutoff and not element.endswith('ed'): 
       if prev_element:
         if random.randint(0,1) == 0:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} in relation to {prev_element}?", img)["text"]
@@ -310,7 +306,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
         
         #augment the sentence with fake data
-        l, aug2ent, person2person = augment_ents(l, do_person=True, do_loc=True, do_obj=False)
+        l, aug2ent  = augment_ents(l, do_person=True, do_loc=True, do_obj=False)
         
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
@@ -403,17 +399,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2en))
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug2ent))
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent, [person]+ list(person2person.keys()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent))  
                 
-                #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, aug2ent, [person]+ list(person2person.keys()))
+                #let's do some cleanup of the ents since we injected more information then is in natural text
+                matched_sentence = simplify_aug(matched_sentence, aug2ent))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
@@ -456,8 +452,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       l_lower = generated_sentence.lower()
                       if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
                       orig_generated_sentence = generated_sentence
-                      #generate an image 
+                      
+                      #augment the sentence with fake data
+                      generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
                       generated_sentence = random.choice(["", "", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])+generated_sentence
+                      #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
