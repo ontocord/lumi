@@ -6,7 +6,7 @@ try:
   sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                            os.path.pardir)))
 except:
-  sys.path.append(os.path.abspath(os.path.joinaug1
+  sys.path.append(os.path.abspath(os.path.join("./",
                                            os.path.pardir)))
 
 from lumi.stopwords  import stopwords
