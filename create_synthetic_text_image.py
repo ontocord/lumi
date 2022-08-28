@@ -47,7 +47,8 @@ color_adj = ["brown", "black", "blue", "gray", "green", \
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
-
+person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
+person_lst_set = set(person_lst)
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
@@ -107,7 +108,7 @@ def aug_person(person_str="", is_male=True):
     if is_male: 
       person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
     else:
-      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "gal", "girl", "person"])
+      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "person"])
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
   return person.strip()
 
@@ -123,12 +124,21 @@ def simplify_aug(sentence, all_aug, all_simplify=[]):
       sentence = sentence.replace(key, val)
   return sentence
 
+def strip_left_stopwords(e_text):
+  e_text2 = []
+  add_rest = False
+  for et in e_text.split():
+      if add_rest or (et.lower() not in stopwords_set):
+        add_rest = True
+        e_text2.append(et)
+  return " ".join(e_text2)
+
 def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
-  noun_chunks = [e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", "") for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
-  ner_and_verbs = dict([(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5], e.text) for e in doc.ents if len(e.text) > 4] + \
-                           [(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5], e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
+  noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+  ner_and_verbs = dict([(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc.ents if len(e.text) > 4] + \
+                           [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
                            [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
   text4 = list(set(list(ner_and_verbs.values()))) + other_sent_arr
   if False: #to get ony longest subsuming text
@@ -160,18 +170,12 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
   doc = spacy_nlp(l)
   ents = [(e.text, e.label_) for e in doc.ents]
   if do_obj: 
-    ents += [(e.text.replace("the ", "").replace("these ", "").replace("this ", "").replace("that ", ""), 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
+    ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
   for e_text, e_label in list(set(ents)):
     if not e_text.strip(): continue
     if e_text.lower() in seen: continue
     if random.random() > prob_of_swap: continue
-    e_text2 = []
-    add_rest = False
-    for et in e_text.split():
-      if add_rest or (et.lower() not in stopwords_set):
-        add_rest = True
-        e_text2.append(et)
-    e_text = " ".join(e_text2)
+    e_text = strip_left_stopwords(e_text)
     if not e_text.strip(): continue
     if e_text.lower() in seen: continue
     if e_label  in ('LOC', 'GPE', 'FAC',) and do_loc:
@@ -195,7 +199,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, ent2ner, persons=[]):
   has_color = any(a in color_adj_set for a in ents)
   has_shape = any(a in shape_adj_set for a in ents)
   has_emotion = any(a in emotion_adj_set for a in ents)
-  persons = set(itertools.chain(*[a.lower().split() for a in persons]))
+  persons = set(itertools.chain(*[strip_left_stopwords(a.lower()).split() for a in persons]))
   print ('persons', persons)
   element2text = matched_output['element2text']
   prev_element = ""
@@ -231,12 +235,13 @@ def create_qa_vlt5(matched_output, img, score_cutoff, ent2ner, persons=[]):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what shape is {element}?|| {answer}"]  
-      if has_emotion or element[0] == element[0].upper() or any(a.lower() in  persons for a in element.split()):
+      if any(a.lower() in  persons or a.lower() in emotion_adj_set for a in element.split()):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} feeling?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,5)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"]  
       prev_element = element
-      
+    
+
 def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
@@ -408,7 +413,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
-                      create_qa_vlt5(matched_output, img, score_cutoff*1.25,  person2person.values())
+                      create_qa_vlt5(matched_output, img, score_cutoff*1.25,  ent2ner, person2person.values())
                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
@@ -447,7 +452,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
                         #create question-answers from image
-                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  person2person.values())
+                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  ent2ner, person2person.values())
                         if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
                             display(img)  
