@@ -140,7 +140,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   ner_and_verbs = dict([(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc.ents if len(e.text) > 4] + \
                            [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
                            [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
-  text4 = list(set(list(ner_and_verbs.values()))) + other_sent_arr
+  text4 = list(set([a for a in (list(ner_and_verbs.values()) + other_sent_arr) if a.strip()]))
   if False: #to get ony longest subsuming text
     text5 = []
     text4.sort(key=lambda a: len(a), reversed=True)
@@ -153,7 +153,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
     clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True)  
     if clip_output is not None:
       #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
-      #image is shape = [75,75,3], dtype="uint8"
+      #image is shape = [100,100,3], dtype="uint8"
       #tokens is [1, 1028] int16
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
