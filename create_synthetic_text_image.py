@@ -399,17 +399,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2en))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2en)
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent)
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug2ent))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug2ent)
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent)  
                 
                 #let's do some cleanup of the ents since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, aug2ent))
+                matched_sentence = simplify_aug(matched_sentence, aug2ent)
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
