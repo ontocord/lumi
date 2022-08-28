@@ -399,7 +399,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2en)
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2ent)
                 else:
                   prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent)
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
