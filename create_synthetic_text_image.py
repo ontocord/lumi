@@ -109,7 +109,7 @@ def aug_person(person_str="", is_male=True):
       person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
     else:
       person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "person"])
-  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person")..replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person").
+  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person")..replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person")
   return person.strip()
 
 def simplify_aug(sentence, all_aug):
