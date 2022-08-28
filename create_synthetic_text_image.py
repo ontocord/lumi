@@ -128,7 +128,8 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
   if do_obj: 
     ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
   for e_text, e_label in list(set(ents)):
-    if not e_text.strip(): continue
+    e_text = e_text.strip("()[]0123456789-:,.+? ")
+    if not e_text: continue
     if e_text.lower() in seen: continue
     if random.random() > prob_of_swap: continue
     e_text = strip_left_stopwords(e_text)
@@ -147,14 +148,14 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     if e_label == 'PERSON' and simplify_person:
         aug_word_arr = aug_word.split()
         if len(aug_word_arr) > 3:
-          aug_word2 = aug_word_arr[0]+" " + " ".join(aug_word_arr[-2:])
+          aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
     seen[e_text.lower()] = 1
   if other_person_list:
     for aug_word in other_person_list:
       aug_word_arr = aug_word.split()
       if len(aug_word_arr) > 3:
-          aug_word2 = aug_word_arr[0]+" " + " ".join(aug_word_arr[-2:])
+          aug_word2 = = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
   return l, aug2ent
 
@@ -175,7 +176,8 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
   ner_and_verbs = dict([(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc.ents if len(e.text) > 4] + \
                            [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
                            [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
-  text4 = list(set([a for a in (list(ner_and_verbs.values()) + other_sent_arr) if a.strip()]))
+  text4 = list(set([a.strip("()[]0123456789-:,.+? ") for a in (list(ner_and_verbs.values()) + other_sent_arr) if a.strip()]))
+  text4 = [a for a in text4 if a.strip()]
   if False: #to get ony longest subsuming text
     text5 = []
     text4.sort(key=lambda a: len(a), reversed=True)
@@ -472,9 +474,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       orig_generated_sentence = generated_sentence
                       
                       #augment the sentence with fake data
-                      image_type = random.choice(["", "",  "", "", "", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
-                      if not ("cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
+                      image_type = random.choice(["", "",  "", "", "",  "", "rendering of :", "vector art of: ", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
+                      if not ("rendering" in image_type "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
+                        mult = 1.0
                         generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                      else:
+                        multi = 1.25
                       generated_sentence = image_type +generated_sentence
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
@@ -483,12 +488,16 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       tokens.dtype = np.int16
                       print ("generated augmented", generated_sentence)
                       generated_sentence = orig_generated_sentence
-                      matched_output = get_decomposed_sent_to_img(generated_sentence, img)
-                      if matched_output and matched_output['score'] > score_cutoff:
-                        matched_output['tokens'] = tokens.tostring()
-                        matched_output['thumbnail'] = np.array(img).tostring()
+                      matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
+                      if matched_output2 and matched_output2['score'] >= multi*score_cutoff and len(a for a in matched_output2['element2text'].values() if a[1] >= score_cutoff) >= (len(matched_output2['element2text'])*.5):
+                        matched_output['tokens2'] = tokens.tostring()
+                        matched_output['thumbnail2'] = np.array(img).tostring()
+                        matched_output['element2text2'] = matched_output2['element2text']
+                        matched_output['score2'] = matched_output2['score']
+                        matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features2']
+                        matched_output['matched_sentence2'] = matched_output2['matched_sentence']
                         if verbose:
-                            print ( matched_output['score'], '**', matched_output['matched_sentence'],  '***', aug2ent, '***', matched_output['element2text'], '***', matched_output.get('qa'))
+                            print ( matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output['element2text'])
                             display(img)  
                         dat_cnt += 1
                         out.write(str(matched_output)+"\n")
