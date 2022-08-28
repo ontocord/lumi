@@ -198,12 +198,29 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
   ent2aug = dict([(b,a) for a, b in aug2ent.items()])
   element2text = matched_output['element2text']
   prev_element = ""
+  if random.randint(0,3) == 0:
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the background?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the background?|| {answer}"]    
+  if random.randint(0,3) == 0:
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the foreground?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the foreground?|| {answer}"]    
+  if random.randint(0,3) == 0:
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is on the left?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is on the left?|| {answer}"]    
+  if random.randint(0,3) == 0:
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is on the right?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is on the right?|| {answer}"]    
+  if random.randint(0,3) == 0:
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in this picture?|| {answer}"]    
+      
   for element, score in reversed(list(element2text.values())):
     if score >= score_cutoff: 
-      if random.randint(0,3) == 0 or element[0] == element[0].upper():
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the back of {element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the back of {element}?|| {answer}"]    
       if prev_element:
         if random.randint(0,1) == 0:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} in relation to {prev_element}?", img)["text"]
@@ -411,9 +428,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if vlt5_caption_with_score:
                       if vlt5_caption_with_score[0][1] > score_cutoff*1.25:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
+                        #create question-answers from image
+                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  aug2ent)
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
-                      create_qa_vlt5(matched_output, img, score_cutoff*1.25,  aug2ent)
                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
@@ -437,24 +455,19 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = generated_sentence.strip()
                       l_lower = generated_sentence.lower()
                       if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
-                      
-                      #augment the sentence with fake data
-                      generated_sentence, aug2ent, person2person = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
+                      orig_generated_sentence = generated_sentence
                       #generate an image 
+                      generated_sentence = random.choice(["", "", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])+generated_sentence
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      orig_generated_sentence = generated_sentence
-                      #remove fake data and get img2text components
-                      generated_sentence = simplify_aug(generated_sentence, aug2ent)
-                      print ("generated augmented", orig_generated_sentence, aug2ent)
+                      print ("generated augmented", generated_sentence)
+                      generated_sentence = orig_generated_sentence
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
-                        #create question-answers from image
-                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  aug2ent)
                         if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
                             display(img)  
