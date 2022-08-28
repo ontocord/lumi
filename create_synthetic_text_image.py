@@ -250,6 +250,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         j = random.randint(0, len(f)-1)
         l = f[j]
         l = l.decode().strip()
+        if l = l.upper(): continue
         if "You are visiting the placeholder page" in l: continue
         l_lower = l.lower()
         if l_lower.count("free") + l_lower.count("dating") + l_lower.count("sex") + l_lower.count("fuck") + l_lower.count("cock") + l_lower.count("pussy") + l_lower.count("xxx") > 3: continue  
