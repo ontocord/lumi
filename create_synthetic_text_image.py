@@ -486,7 +486,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      print ("generated augmented", generated_sentence)
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output2 and matched_output2['score'] >= mult*score_cutoff and len([a for a in matched_output2['element2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['element2text'])*.5):
@@ -494,10 +493,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['element2text2'] = matched_output2['element2text']
                         matched_output['score2'] = matched_output2['score']
-                        matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features2']
+                        matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
                         if verbose:
-                            print ( matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output['element2text'])
+                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output['element2text'])
                             display(img)  
                         dat_cnt += 1
                         out.write(str(matched_output)+"\n")
