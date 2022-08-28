@@ -6,7 +6,7 @@ try:
   sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                            os.path.pardir)))
 except:
-  sys.path.append(os.path.abspath(os.path.join("./",
+  sys.path.append(os.path.abspath(os.path.joinaug1
                                            os.path.pardir)))
 
 from lumi.stopwords  import stopwords
@@ -164,7 +164,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
 
 def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33):
   global spacy_nlp
-  ent2ner =  {}
+  aug2ent =  {}
   person2person = {}
   seen = {}
   doc = spacy_nlp(l)
@@ -189,18 +189,13 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, prob_of_swap=.33
     l = l.replace(e_text, aug_word,1)
     if e_label == 'PERSON':
         person2person[aug_word] = e_text
-    ent2ner[aug_word] = e_text
+    aug2ent[aug_word] = e_text
     seen[e_text.lower()] = 1
-  return l, ent2ner, person2person
+  return l, aug2ent, person2person
 
-def create_qa_vlt5(matched_output, img, score_cutoff, ent2ner, persons=[]):
+def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
   global vlt5, vlt5_tokenizer
-  ents = set(itertools.chain(*[a.lower().split() for a in ent2ner.keys()]))
-  has_color = any(a in color_adj_set for a in ents)
-  has_shape = any(a in shape_adj_set for a in ents)
-  has_emotion = any(a in emotion_adj_set for a in ents)
-  persons = set(itertools.chain(*[strip_left_stopwords(a.lower()).split() for a in persons]))
-  print ('persons', persons)
+  ent2aug = dict([(b,a) for a, b in aug2ent.items()])
   element2text = matched_output['element2text']
   prev_element = ""
   for element, score in reversed(list(element2text.values())):
@@ -223,19 +218,23 @@ def create_qa_vlt5(matched_output, img, score_cutoff, ent2ner, persons=[]):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} doing?|| {answer}"]    
+      elif random.randint(0,1) == 0:
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} for?|| {answer}"] 
       else:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element}?|| {answer}"]    
-      if has_color or random.randint(0,3) == 0 or element[0] == element[0].upper():
+      if any(a in color_adj_set for a in ent2aug.get(element, "").split()):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what color is {element}?|| {answer}"]  
-      if has_shape:
+      if any(a in shape_adj_set for a in ent2aug.get(element, "").split()):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what shape is {element}?|| {answer}"]  
-      if any(a.lower() in  persons or a.lower() in emotion_adj_set for a in element.split()):
+      if any(a in emotion_adj_set for a in ent2aug.get(element, "").split()):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} feeling?",  img) ["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,5)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
           matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"]  
@@ -293,7 +292,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
         
         #augment the sentence with fake data
-        l, ent2ner, person2person = augment_ents(l, do_person=True, do_loc=True, do_obj=False)
+        l, aug2ent, person2person = augment_ents(l, do_person=True, do_loc=True, do_obj=False)
         
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
@@ -386,17 +385,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("doubled", matched_sentence)
                 prev_text2 = "" if didx <= 0  else dat[didx-1]
                 if prev_text and prev_text2 and prev_text[0] == prev_text[0].upper():
-                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+". "+prev_text).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
                 else:
-                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
+                  prev_text = simplify_aug((prev_text2+" "+prev_text).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
                   next_text2 = "" if didx >= len(dat) -1 else  dat[didx+1]
                   if next_text2 and next_text and next_text2[0] == next_text2[0].upper():
-                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), ent2ner, [person]+ list(person2person.keys()))
+                    next_text = simplify_aug((next_text +". "+next_text2).strip(" ."), aug2ent, [person]+ list(person2person.keys()))
                   else:
-                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), ent2ner, [person]+ list(person2person.keys()))  
+                    next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent, [person]+ list(person2person.keys()))  
                 
                 #let's do some cleanup of the person mention since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, ent2ner, [person]+ list(person2person.keys()))
+                matched_sentence = simplify_aug(matched_sentence, aug2ent, [person]+ list(person2person.keys()))
                 # now find the entities and important verbs in the most similar sentence
                 matched_output = get_decomposed_sent_to_img(matched_sentence, img, [vlt5_caption])
                 if matched_output:
@@ -413,7 +412,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
-                      create_qa_vlt5(matched_output, img, score_cutoff*1.25,  ent2ner, person2person.values())
+                      create_qa_vlt5(matched_output, img, score_cutoff*1.25,  aug2ent)
                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
@@ -437,7 +436,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = generated_sentence.strip()
                       
                       #augment the sentence with fake data
-                      generated_sentence, ent2ner, person2person = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
+                      generated_sentence, aug2ent, person2person = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True)
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
@@ -445,14 +444,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       tokens.dtype = np.int16
                       orig_generated_sentence = generated_sentence
                       #remove fake data and get img2text components
-                      generated_sentence = simplify_aug(generated_sentence, ent2ner)
-                      print ("generated augmented", orig_generated_sentence, ent2ner)
+                      generated_sentence = simplify_aug(generated_sentence, aug2ent)
+                      print ("generated augmented", orig_generated_sentence, aug2ent)
                       matched_output = get_decomposed_sent_to_img(generated_sentence, img)
                       if matched_output and matched_output['score'] > score_cutoff:
                         matched_output['tokens'] = tokens.tostring()
                         matched_output['thumbnail'] = np.array(img).tostring()
                         #create question-answers from image
-                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  ent2ner, person2person.values())
+                        create_qa_vlt5(matched_output, img, score_cutoff*1.25,  aug2ent)
                         if verbose:
                             print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', matched_output['element2text'], '***', matched_output.get('qa'))
                             display(img)  
