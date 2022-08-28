@@ -489,7 +489,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print ("generated augmented", generated_sentence)
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
-                      if matched_output2 and matched_output2['score'] >= multi*score_cutoff and len(a for a in matched_output2['element2text'].values() if a[1] >= score_cutoff) >= (len(matched_output2['element2text'])*.5):
+                      if matched_output2 and matched_output2['score'] >= multi*score_cutoff and len([a for a in matched_output2['element2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['element2text'])*.5):
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['element2text2'] = matched_output2['element2text']
