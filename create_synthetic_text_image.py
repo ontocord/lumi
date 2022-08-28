@@ -43,7 +43,7 @@ shape_adj = ["near", "far", "large", "small", "medium", "tall", "broad", "crooke
               "thin", "triangular", "uneven"]
 shape_adj_set = set(shape_adj)
 color_adj = ["brown", "black", "blue", "gray", "green", \
-             "pink", "purple", "red", "orange", "white", "yellow"]
+             "pink", "purple", "red", "white", "yellow"] # "orange", confuses image generators to generate an orange fruit
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
@@ -468,11 +468,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = generated_sentence.strip()
                       l_lower = generated_sentence.lower()
                       if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
+                      if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.5: continue
                       orig_generated_sentence = generated_sentence
                       
                       #augment the sentence with fake data
-                      generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=False, do_obj=True, other_person_list=other_person_list)
-                      generated_sentence = random.choice(["", "", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])+generated_sentence
+                      image_type = random.choice(["", "",  "", "", "", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
+                      if not ("cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
+                        generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                      generated_sentence = image_type +generated_sentence
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
