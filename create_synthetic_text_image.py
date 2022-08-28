@@ -97,10 +97,10 @@ def aug_loc(loc_str=""):
 def aug_person(person_str="", is_male=True):
   norp = ""
   norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
-  norp += " " +random.choice(["", "", "", ""] + emotion_adj)
+  norp += " " +random.choice(["", "", "", "", "", "", "", "", ] + emotion_adj)
   norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
   norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
-  norp += " " +random.choice(["", "", "", "", "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
+  norp += " " +random.choice(["", "", "", "",  "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
   norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
   if person_str and random.randint(0,1) == 0: 
     person = norp + " " + person_str
@@ -109,7 +109,7 @@ def aug_person(person_str="", is_male=True):
       person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
     else:
       person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "person"])
-  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person")..replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person").
   return person.strip()
 
 def simplify_aug(sentence, all_aug):
@@ -195,7 +195,8 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'element2text': clip_output['element2text'], \
                               'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(), }
       return matched_output
-  return None     
+  return None    
+
 def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
   global vlt5, vlt5_tokenizer
   ent2aug = dict([(b,a) for a, b in aug2ent.items()])
@@ -278,6 +279,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         if l_lower.count("free") +  l_lower.count("viagra") +   l_lower.count("cialis") > 3: continue 
         l = l.replace("because this is pdf file * PDF *", " ... ")
         l = l.replace("no short description", " ... ")
+        l = l.replace("Field of the Invention", "") 
+        l = l.replace("The present invention relates to", "")
+        l = l.replace("Description of the Prior Art", "")
+        l = l.replace("Prior Art", "")
         trimmed_text = l.lower().split()
         stopword_cnt = len([word for word in trimmed_text if word in stopwords_set ])
         shortword_cnt = len([word for word in trimmed_text if len(word) < 5])
@@ -319,7 +324,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         other_person_list.append(person)
         #augment the sentence with fake data
-        l, aug2ent  = augment_ents(l, do_person=True, do_loc=True, do_obj=False, other_person_list=other_person_list)
+        l, aug2ent  = augment_ents(l, do_person=True, do_loc=False, do_obj=False, other_person_list=other_person_list)
         
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
