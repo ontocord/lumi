@@ -184,7 +184,8 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
     text4 = text5            
   if text4:
     #score the entities and verbs against the image
-    clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True)  
+    normalized_boxes = decode_image(img, vlt5.frcnn_model,  vlt5.image_preprocessor, max_detection=len(text4))["nomralized_boxes"][0]
+    clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes)  
     if clip_output is not None:
       #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
       #image is shape = [100,100,3], dtype="uint8"
