@@ -115,13 +115,21 @@ def load_json_like_from_str(s, **kwargs):
 def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, decompose_image=False, normalized_boxes=None):
   p = next(clip_model.parameters())
   decomposed_image_features = None 
+  if type(image) is np.array:
+      pil_image = PIL.Image.fromarray(image)
+    else:
+      pil_image = image
+      image = np.array(image)
   if normalized_boxes is not None:
-      imgs = [image]
-      np_img = np.array(image)
-      shape = np_img.shape
-      for x,y,w,h in normalized_boxes:
-       imgs.append(PIL.Image(np_image[:,int(x*shape[1]): int(x*shape[1] + w*shape[1]), int(y*shape[2]): int(y*shape[2] + h*shape[2])])) 
-      inputs = clip_processor(images=imgs, return_tensors="pt")
+    images = [image]
+    display (pil_image)
+    shape = pil_image.size
+    for x1,y1,x2,y2 in normalized_boxes
+      cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int(x2*shape[0]), int(y2*shape[1])]
+      print (cropped_img_coord)
+      cropped_PIL_img = pil_image.crop(cropped_img_coord)
+      images.append(np.array(cropped_PIL_img))
+      display(cropped_PIL_img)  
   else:
       imgs = [image]    
   if clip_vision_output is None:
