@@ -121,15 +121,15 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       pil_image = image
       image = np.array(image)
   if normalized_boxes is not None:
-    images = [image]
+    imgs = [image]
     display (pil_image)
     shape = pil_image.size
     for x1,y1,x2,y2 in normalized_boxes:
       cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int(x2*shape[0]), int(y2*shape[1])]
-      print (cropped_img_coord)
+      #print (cropped_img_coord)
       cropped_PIL_img = pil_image.crop(cropped_img_coord)
       images.append(np.array(cropped_PIL_img))
-      display(cropped_PIL_img)  
+      #display(cropped_PIL_img)  
   else:
       imgs = [image]    
   if clip_vision_output is None:
