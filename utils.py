@@ -112,51 +112,90 @@ def load_json_like_from_str(s, **kwargs):
              ret[key] = Image.fromarray(ret[key])
       return ret
 
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, decompose_image=False):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, decompose_image=False, normalized_boxes=None):
   p = next(clip_model.parameters())
   decomposed_image_features = None 
+  if normalized_boxes is not None:
+      imgs = [image]
+      np_img = np.array(image)
+      shape = np_img.shape
+      for x,y,w,h in normalized_boxes:
+       imgs.append(PIL.Image(np_image[:,int(x*shape[1]): int(x*shape[1] + w*shape[1]), int(y*shape[2]): int(y*shape[2] + h*shape[2])])) 
+      inputs = clip_processor(images=imgs, return_tensors="pt")
+    else:
+      imgs = [image]    
   if clip_vision_output is None:
-    inputs = clip_processor(images=image, return_tensors="pt")
+    inputs = clip_processor(images=imgs, return_tensors="pt")
     if True: # with torch.no_grad():
       inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
       inputs['return_dict'] = True
       clip_vision_output = clip_model.vision_model(**inputs)
       if decompose_image:
-        o = (clip_vision_output["last_hidden_state"] + 9*clip_vision_output["last_hidden_state"][:,0,:])/10
+        o = (clip_vision_output["last_hidden_state"][0,:,:] + cls_weight*10*clip_vision_output["last_hidden_state"][0,0,:])/(cls_weight*10+1)
         clip_vision_output.decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
-      clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"])
+      # image_features[0] is the main picture, the rest are the cropped parts of the picture
+      clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
   image_features = clip_vision_output.image_features
   if hasattr(clip_vision_output, 'decomposed_image_features'):
     decomposed_image_features = clip_vision_output.decomposed_image_features
-  inputs = clip_processor(text_array, padding=True, return_tensors="pt").to(p.device)
-  try: # with torch.no_grad():
-    text_features = clip_model.get_text_features(**inputs)
-  except:
-    return None
-  scores =  cosine_similarity(image_features, text_features, dim=1)
+  if type(text_array) is str: text_array = [text_array]
+  if text_features is None:
+   inputs = clip_processor(text_array, padding=True, return_tensors="pt").to(p.device)
+   try: # with torch.no_grad():
+     text_features = clip_model.get_text_features(**inputs)
+   except:
+     return None
+  scores =  cosine_similarity(image_features[0].unsqueeze(0), text_features, dim=1)
+  if normalized_boxes is not None:
+    cropped_scores_topk = []
+    croppedd_scores = []
+    for tfeat in text_features:
+      scores2 =  cosine_similarity(image_features[1:], tfeat.unsqueeze(0), dim=1)
+      cropped_scores_topk.append(scores2.topk(k=min(len(text_array), image_features.shape[1]-1)))
+      cropped_scores.append(cropped_scores_topk[-1].values[0])
+    cropped2text = {}
+    cropped_scores = torch.stack(cropped_scores)
+    cindices = cropped_scores.sort().indices.tolist()
+    cindices.reverse()
+    for cidx in cindices:
+      text, topk = text_array[cidx], cropped_scores_topk[cidx]
+      for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
+        if idx != 0 and idx not in cropped2text: 
+          cropped2text[idx] = (text, score)
+          break
+  else:
+    cropped2text = {}
+    cropped_scores_topk = [] 
+    cropped_scores = []
+    
   if decompose_image:
     decomposed_scores_topk = []
     decomposed_scores = []
     for tfeat in text_features:
-      scores2 =  cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
-      decomposed_scores_topk.append(scores2.topk(k=decomposed_image_features.shape[1]))
+      scores2 =  
+      cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
+      decomposed_scores_topk.append(scores2.topk(k=min(len(text_array), decomposed_image_features.shape[1])))
       decomposed_scores.append(decomposed_scores_topk[-1].values[0])
-    element2text = {}
+    decomposed2text = {}
     decomposed_scores = torch.stack(decomposed_scores)
     cindices = decomposed_scores.sort().indices.tolist()
     cindices.reverse()
     for cidx in cindices:
       text, topk = text_array[cidx], decomposed_scores_topk[cidx]
       for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
-        if idx != 0 and idx not in element2text: 
-          element2text[idx] = (text, score)
+        if idx != 0 and idx not in decomposed2text: 
+          decomposed2text[idx] = (text, score)
           break
   else:
-    element2text = {}
+    decomposed2text = {}
     decomposed_scores_topk = [] 
     decomposed_scores = []
   
-  return {'decomposed_image_features': decomposed_image_features, 'element2text': element2text, 'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, 'clip_vision_output': clip_vision_output, 'text_features': text_features}
+  return {'images': imgs, 'normalized_boxes': normalized_boxes, \
+           'cropped_image_features': cropped_image_features, 'cropped2text': cropped2text, \
+           'decomposed_image_features': decomposed_image_features, 'decomposed2text': decomposed2text, \
+           'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, \
+           'clip_vision_output': clip_vision_output, 'text_features': text_features}
 
 # for visualizing output
 def showarray(a, fmt='jpeg'):
