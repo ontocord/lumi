@@ -523,7 +523,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
                         matched_output['qa2'] = matched_output2['qa']
                         if verbose:
-                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['element2text'])
+                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['element2text'], '***', matched_output2.get('qa'))
                             display(img)  
                         dat_cnt += 1
                         out.write(str(matched_output)+"\n")
