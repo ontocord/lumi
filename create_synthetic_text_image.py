@@ -228,8 +228,10 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), 
     person = "girl"
   elif " boy " in l:
     person = "boy"
-  elif " man ":
+  elif " man " in l:
     person = "man"
+  elif " person " in l:
+    person = "person"
   else:
     person = ""
   if person:
@@ -237,7 +239,9 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), 
       if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
         matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is the {person} feeling?|| {answer}"]    
   entity_to_qa = 0    
-  for element, score in reversed(list(element2text.values())):
+  elements = list(element2text.values())
+  elements.sort(key=lambda a: a[1], reverse=True)
+  for element, score in elements:
     if element in ignore_sents: continue
     if score >= score_cutoff and not element.endswith('ed'): 
       if entity_to_qa >= max_qa: break
