@@ -444,7 +444,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if vlt5_caption_with_score[0][1] > score_cutoff:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
                         #create question-answers from image
-                        create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, (vlt5_caption,)
+                        create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, (vlt5_caption,))
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
                          
