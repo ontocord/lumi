@@ -191,7 +191,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       #tokens is [1, 1028] int16
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
-      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'element2text': clip_output['element2text'], \
+      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'decomposed2text': clip_output['decomposed2text'], \
                               'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(), }
       return matched_output
   return None    
@@ -199,7 +199,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
 def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), max_qa=3):
   global vlt5, vlt5_tokenizer
   ent2aug = dict([(b,a) for a, b in aug2ent.items()])
-  element2text = matched_output['element2text']
+  decomposed2text = matched_output['decomposed2text']
   l = matched_output["matched_sentence"]
   prev_element = ""
   if random.randint(0,3) == 0:
@@ -239,7 +239,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), 
       if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
         matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is the {person} feeling?|| {answer}"]    
   entity_to_qa = 0    
-  elements = list(element2text.values())
+  elements = list(decomposed2text.values())
   elements.sort(key=lambda a: a[1], reverse=True)
   for element, score in elements:
     if element in ignore_sents: continue
@@ -462,9 +462,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     if qa:
                       matched_output['qa'] = matched_output.get('qa',[]) + qa
-                    element2text = matched_output['element2text']
+                    decomposed2text = matched_output['decomposed2text']
                     #clip score of vlt5 caption against the image
-                    vlt5_caption_with_score = [e for e in element2text.values() if e[0] == vlt5_caption]
+                    vlt5_caption_with_score = [e for e in decomposed2text.values() if e[0] == vlt5_caption]
                     if vlt5_caption_with_score:
                       #if vlt5 did an ok job of captioning, it is more likely able to do qa.
                       if vlt5_caption_with_score[0][1] > score_cutoff:
@@ -475,7 +475,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
                          
                     if verbose:
-                      print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['element2text'], '***', matched_output.get('qa'))
+                      print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2text'], '***', matched_output.get('qa'))
                       if 'annotated_image' in vlt5_output['frcnn_output']:
                         display(vlt5_output['frcnn_output']['annotated_image'])
                       else:
@@ -484,7 +484,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     dat_cnt += 1    
                     
                     #now let's create a different sentence based on the elements of the previous sentence
-                    word_str = ", ".join([a[0] for a in element2text.values() if a[1] >= score_cutoff and a[0] != vlt5_caption])
+                    word_str = ", ".join([a[0] for a in decomposed2text.values() if a[1] >= score_cutoff and a[0] != vlt5_caption])
                     if word_str:
                       
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
@@ -517,17 +517,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       # we only use the fake data to generate the image. the text2img matching uses the original sentence.
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img)
-                      if matched_output2 and matched_output2['score'] >= mult*score_cutoff and len([a for a in matched_output2['element2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['element2text'])*.5):
+                      if matched_output2 and matched_output2['score'] >= mult*score_cutoff and len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent)
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
-                        matched_output['element2text2'] = matched_output2['element2text']
+                        matched_output['decomposed2text2'] = matched_output2['decomposed2text']
                         matched_output['score2'] = matched_output2['score']
                         matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
                         matched_output['qa2'] = matched_output2['qa']
                         if verbose:
-                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['element2text'], '***', matched_output2.get('qa'))
+                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             display(img)  
                         dat_cnt += 1
                         out.write(str(matched_output)+"\n")
