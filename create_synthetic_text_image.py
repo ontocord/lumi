@@ -96,11 +96,8 @@ def aug_loc(loc_str=""):
 
 def aug_person(person_str="", is_male=True):
   norp = ""
-  norp += " " +random.choice(["", "", "", "", "gay", "straight", "bisexual",])
-  norp += " " +random.choice(["", "", "", "", "", "", "", "", ] + emotion_adj)
-  norp += " " +random.choice(["", "", "", "", "conservative", "liberal", "moderate"])
-  norp += " " +random.choice(["", "", "", "", "christian", "muslim", "buddhist", "hindu", ])
-  norp += " " +random.choice(["", "", "", "",  "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
+  norp += " " +random.choice(["", "", "", "", "", "", "", "", "gay", "straight", "bisexual", "conservative", "liberal", "moderate"] + emotion_adj)
+  norp += " " +random.choice(["", "", "", "", "", "", "", "", "christian", "muslim", "buddhist", "hindu",  "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
   norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
   if person_str and random.randint(0,1) == 0: 
     person = norp + " " + person_str
