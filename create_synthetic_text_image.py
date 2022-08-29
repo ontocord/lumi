@@ -196,7 +196,7 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[]):
       return matched_output
   return None    
 
-def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
+def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=()):
   global vlt5, vlt5_tokenizer
   ent2aug = dict([(b,a) for a, b in aug2ent.items()])
   element2text = matched_output['element2text']
@@ -223,6 +223,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent):
       matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in this picture?|| {answer}"]    
       
   for element, score in reversed(list(element2text.values())):
+    if element in ignore_sents: continue
     if score >= score_cutoff and not element.endswith('ed'): 
       if prev_element:
         if random.randint(0,1) == 0:
@@ -443,7 +444,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if vlt5_caption_with_score[0][1] > score_cutoff:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || Yes"]
                         #create question-answers from image
-                        create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent)
+                        create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, (vlt5_caption,)
                       elif random.randint(0,5)==0:
                         matched_output['qa'] = matched_output.get('qa',[]) +  [f"Is there {vlt5_caption_with_score[0][0]} in this picture? || No"]  
                          
