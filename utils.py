@@ -122,7 +122,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       for x,y,w,h in normalized_boxes:
        imgs.append(PIL.Image(np_image[:,int(x*shape[1]): int(x*shape[1] + w*shape[1]), int(y*shape[2]): int(y*shape[2] + h*shape[2])])) 
       inputs = clip_processor(images=imgs, return_tensors="pt")
-    else:
+  else:
       imgs = [image]    
   if clip_vision_output is None:
     inputs = clip_processor(images=imgs, return_tensors="pt")
@@ -172,8 +172,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     decomposed_scores_topk = []
     decomposed_scores = []
     for tfeat in text_features:
-      scores2 =  
-      cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
+      scores2 =  cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
       decomposed_scores_topk.append(scores2.topk(k=min(len(text_array), decomposed_image_features.shape[1])))
       decomposed_scores.append(decomposed_scores_topk[-1].values[0])
     decomposed2text = {}
@@ -192,7 +191,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     decomposed_scores = []
   
   return {'images': imgs, 'normalized_boxes': normalized_boxes, \
-           'cropped_image_features': cropped_image_features, 'cropped2text': cropped2text, \
+           'image_features': image_features, 'cropped2text': cropped2text, \
            'decomposed_image_features': decomposed_image_features, 'decomposed2text': decomposed2text, \
            'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, \
            'clip_vision_output': clip_vision_output, 'text_features': text_features}
