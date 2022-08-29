@@ -224,15 +224,15 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), 
       matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in this picture?|| {answer}"]    
   if " woman " in l:
     person = "woman"
-   elif " girl " in l:
+  elif " girl " in l:
     person = "girl"
-   elif " boy " in l:
+  elif " boy " in l:
     person = "boy"
-   elif " man ":
+  elif " man ":
     person = "man"
-   else:
+  else:
     person = ""
-   if person:
+  if person:
       answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
       if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
         matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is the {person} feeling?|| {answer}"]    
