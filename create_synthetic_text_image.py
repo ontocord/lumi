@@ -195,7 +195,8 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cro
       imgs = clip_output['cropped_images'] 
       if cropped2text:
         for idx, vals in cropped2text.items():
-          if vals[1] > 0.20:
+          if vals
+          [1] > 0.20:
               ci = imgs[idx]
               display(PIL.Image.fromarray(ci))
               print (vals)
