@@ -519,7 +519,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       # we only use the fake data to generate the image. the text2img matching uses the original sentence.
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img, get_cropped_images=True, verbose=verbose)
-                      if matched_output2 and and \
+                      if matched_output2 and \
                           any(a for a in matched_output['decomposed2text'].values() if a[1] > score_cutoff) and \
                           any(a for a in matched_output['cropped2text'].values() if a[1] > score_cutoff) and \
                           matched_output2['score'] >= mult*score_cutoff and \
