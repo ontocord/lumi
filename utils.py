@@ -175,7 +175,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       text, topk = text_array[cidx], cropped_scores_topk[cidx]
       for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
         if idx not in cropped2text: 
-          cropped2text[idx] = (text, score)
+          cropped2text[idx] = (text, score, coords[idx])
           break
   else:
     cropped2text = {}
