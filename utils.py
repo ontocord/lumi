@@ -160,9 +160,10 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     cropped_scores = []
     cropped_image_features = image_features[1:]
     print (scores)
+    print ('cropped_image_features.shape', cropped_image_features.shape)
     for cidx, tfeat in enumerate(text_features):
       scores2 =  min (1.0, (scores[cidx] + add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
-      cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[1])))
+      cropped_scores_topk.append(scores2.topk(k=cropped_image_features.shape[1]))
       cropped_scores.append(cropped_scores_topk[-1].values[0])
     cropped2text = {}
     cropped_scores = torch.stack(cropped_scores)
