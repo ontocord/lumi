@@ -157,7 +157,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
    except:
      return None
   scores =  cosine_similarity(image_features[0].unsqueeze(0), text_features, dim=1)
-  if normalized_boxes is not None:
+  if len(imgs) > 1:
     cropped_scores_topk = []
     cropped_scores = []
     cropped_image_features = image_features[1:]
