@@ -205,7 +205,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     decomposed_scores = []
   
   return {'image': image, 'cropped_images': imgs[1:], 'normalized_boxes': normalized_boxes, \
-           'coords': coords, 'image_features': image_features, 'cropped2text': cropped2text, \
+           'coords': coords, 'image_features': image_features[0].unsqueeze(0), 'cropped2text': cropped2text, \
            'decomposed_image_features': decomposed_image_features, 'decomposed2text': decomposed2text, \
            'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, \
            'clip_vision_output': clip_vision_output, 'text_features': text_features}
