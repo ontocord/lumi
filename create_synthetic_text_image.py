@@ -49,8 +49,8 @@ color_adj_set = set(color_adj)
 
 person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
 person_lst_set = set(person_lst)
-age_list = ["young", "middle-aged", "old"]
-age_lst_set = set(age_lst)
+age_adj_lst = ["young", "teen", "young-adult", "middle-aged", "older", "senior"]
+age_adj_set = set(age_adj_lst)
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
@@ -120,6 +120,7 @@ def simplify_aug(sentence, all_aug):
 
 def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=True, prob_of_swap=.33, other_person_list=[]):
   global spacy_nlp
+  qa_list = []
   aug2ent =  {}
   seen = {}
   doc = spacy_nlp(l)
@@ -136,14 +137,14 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     if e_text.lower() in seen: continue
     if e_label  in ('LOC', 'GPE', 'FAC',) and do_loc:
         aug_word =   aug_loc(e_text)
-        thing = aug_word.split()[-1]
+        thing = " ".join(aug_word.split()[-2:])
         color = [a for a in aug_word.split() if a in color_adj_set]
         if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
         shape = [a for a in aug_word.split() if a in shape_adj_set]
         if shape: qa_list.append((thing, f"what shape is {thing}? || {shape[0]}"))
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
-        the_person = aug_word.split()[-1]
+        the_person =  " ".join(aug_word.split()[-2:])
         if the_person not in person_lst_set: the_person = "person"
         emotion = [a for a in aug_word.split() if a in emotion_adj_set]
         if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
@@ -151,7 +152,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))          
     elif e_label in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ') and do_obj:
         aug_word =  aug_obj(e_text)
-        thing = aug_word.split()[-1]
+        thing =  " ".join(aug_word.split()[-2:])
         color = [a for a in aug_word.split() if a in color_adj_set]
         if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
     else:
@@ -171,7 +172,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     seen[e_text.lower()] = 1
   if other_person_list:
     for aug_word in other_person_list:
-      the_person = aug_word.split()[-1]
+      the_person =  " ".join(aug_word.split()[-2:])
       if the_person not in person_lst_set: the_person = "person"
       emotion = [a for a in aug_word.split() if a in emotion_adj_set]
       if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
