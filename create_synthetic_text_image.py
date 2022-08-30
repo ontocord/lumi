@@ -166,7 +166,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         if len(aug_word_arr) > 3:
           aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
         else:
-          new_word2 = " ".join(aug_word_arr)
+          aug_word2 = " ".join(aug_word_arr)
         aug2ent[aug_word] = aug_word2
         
     seen[e_text.lower()] = 1
@@ -245,13 +245,13 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cro
 def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
   l = matched_output["matched_sentence"]
-  ent2score = dict([(b,1.0) for a in aug2ent.values() if a in l]+[(a,1.0) for a in aug2ent.keys() if a in l])
-  decomposed2text = matched_output.get('decomposed2text', [])
+  ent2score = dict([(a,.01) for a in aug2ent.values() if a in l]+[(a,.01) for a in aug2ent.keys() if a in l])
+  decomposed2text = matched_output.get('decomposed2text', {})
   if decomposed2text:
     for element, score in decomposed2text.values():
       if element in l: ent2score[element] = score
-  cropped2text = matched_output.get('cropped2text', [])
-  if decomposed2text:
+  cropped2text = matched_output.get('cropped2text', {})
+  if cropped2text:
     for element, score in cropped2text.values():
       if element in l: ent2score[element] = score
   for entity, question in potential_qa_list:
@@ -300,9 +300,9 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} for?|| {answer}")] 
             entity_to_qa +=1
       elif random.randint(0,1) == 0 and prev_element:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_elment}?",  img)["text"]
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_elment}?|| {answer}")] 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}")] 
             entity_to_qa +=1
       else:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
