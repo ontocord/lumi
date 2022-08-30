@@ -49,6 +49,8 @@ color_adj_set = set(color_adj)
 
 person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
 person_lst_set = set(person_lst)
+age_list = ["young", "middle-aged", "old"]
+age_lst_set = set(age_lst)
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
@@ -98,7 +100,7 @@ def aug_person(person_str="", is_male=True):
   norp = ""
   norp += " " +random.choice(["", "", "", "", "", "", "", "", "gay", "straight", "bisexual", "conservative", "liberal", "moderate"] + emotion_adj)
   norp += " " +random.choice(["", "", "", "", "", "", "", "", "christian", "muslim", "buddhist", "hindu",  "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
-  norp += " " +random.choice(["", "", "", "", "young", "middle-aged", "old"])
+  norp += " " +random.choice(["", "", "", "", ] + age_adj_lst)
   if person_str and random.randint(0,1) == 0: 
     person = norp + " " + person_str
   else:
@@ -134,10 +136,24 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     if e_text.lower() in seen: continue
     if e_label  in ('LOC', 'GPE', 'FAC',) and do_loc:
         aug_word =   aug_loc(e_text)
+        thing = aug_word.split()[-1]
+        color = [a for a in aug_word.split() if a in color_adj_set]
+        if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
+        shape = [a for a in aug_word.split() if a in shape_adj_set]
+        if shape: qa_list.append((thing, f"what shape is {thing}? || {shape[0]}"))
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
+        the_person = aug_word.split()[-1]
+        if the_person not in person_lst_set: the_person = "person"
+        emotion = [a for a in aug_word.split() if a in emotion_adj_set]
+        if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
+        age = [a for a in aug_word.split() if a in age_adj_set]
+        if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))          
     elif e_label in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ') and do_obj:
         aug_word =  aug_obj(e_text)
+        thing = aug_word.split()[-1]
+        color = [a for a in aug_word.split() if a in color_adj_set]
+        if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
     else:
         aug_word = e_text
     l = l.replace(e_text, aug_word,1)
@@ -151,14 +167,21 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         else:
           new_word2 = " ".join(aug_word_arr)
         aug2ent[aug_word] = aug_word2
+        
     seen[e_text.lower()] = 1
   if other_person_list:
     for aug_word in other_person_list:
+      the_person = aug_word.split()[-1]
+      if the_person not in person_lst_set: the_person = "person"
+      emotion = [a for a in aug_word.split() if a in emotion_adj_set]
+      if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
+      age = [a for a in aug_word.split() if a in age_adj_set]
+      if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))      
       aug_word_arr = aug_word.split()
       if len(aug_word_arr) > 3:
           aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
-  return l, aug2ent
+  return l, aug2ent, qa_list
 
 
 def strip_left_stopwords(e_text):
@@ -209,25 +232,39 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cro
       #tokens is [1, 1028] int16
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
-      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'decomposed2text': clip_output['decomposed2text'], \
-                              'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(), }
+      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'cropped2text': clip_output['cropped2text'], \
+                              'cropped_image_features': clip_output['cropped_image_features'].cpu().numpy().tostring(),  \
+                              'decomposed2text': clip_output['decomposed2text'], \
+                              'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(),\
+                              'image_features': clip_output['image_features'].cpu().numpy().tostring(),\
+                       }
       return matched_output
   return None    
 
-def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), max_qa=3):
+def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
-  ent2aug = dict([(b,a) for a, b in aug2ent.items()])
-  decomposed2text = matched_output['decomposed2text']
   l = matched_output["matched_sentence"]
+  ent2score = dict([(b,1.0) for a in aug2ent.values() if a in l]+[(a,1.0) for a in aug2ent.keys() if a in l])
+  decomposed2text = matched_output.get('decomposed2text', [])
+  if decomposed2text:
+    for element, score in decomposed2text.values():
+      if element in l: ent2score[element] = score
+  cropped2text = matched_output.get('cropped2text', [])
+  if decomposed2text:
+    for element, score in cropped2text.values():
+      if element in l: ent2score[element] = score
+  for entity, question in potential_qa_list:
+    if entity in l:
+      matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
   prev_element = ""
   if random.randint(0,3) == 0:
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the background?",  img)["text"]
-    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the background?|| {answer}"]    
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("mirror", "nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [('background', f"what is in the background?|| {answer}")]    
   elif random.randint(0,3) == 0:
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the foreground?",  img)["text"]
-    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-      matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is in the foreground?|| {answer}"]    
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("mirror", "nothing", "nowhere", "unknown", "black", "white")): 
+      matched_output['qa'] = matched_output.get('qa',[]) +  [('foreground', f"what is in the foreground?|| {answer}")]    
   if " woman " in l:
     person = "woman"
   elif " girl " in l:
@@ -243,46 +280,36 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, ignore_sents=(), 
   if person:
       answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
       if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-        matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is the {person} feeling?|| {answer}"]    
+        matched_output['qa'] = matched_output.get('qa',[]) +  [(person, f"what is the {person} feeling?|| {answer}")]    
   entity_to_qa = 0    
-  elements = list(decomposed2text.values())
+  elements = list(ent2score.items())
   elements.sort(key=lambda a: a[1], reverse=True)
   for element, score in elements:
-    if element in ignore_sents: continue
-    if score >= score_cutoff and not element.endswith('ed'): 
+    if element not in l: continue
+    if score >= score_cutoff: 
       if entity_to_qa >= max_qa: break
       if random.randint(0,1) == 0:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} doing?|| {answer}"] 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} doing?|| {answer}")] 
             entity_to_qa +=1
       elif random.randint(0,1) == 0:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} for?|| {answer}"] 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} for?|| {answer}")] 
+            entity_to_qa +=1
+      elif random.randint(0,1) == 0 and prev_element:
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_elment}?",  img)["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_elment}?|| {answer}")] 
             entity_to_qa +=1
       else:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element}?|| {answer}"]    
-      if any(a in color_adj_set for a in ent2aug.get(element, "").split()):
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img) ["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what color is {element}?|| {answer}"]
-          entity_to_qa +=1
-      if any(a in shape_adj_set for a in ent2aug.get(element, "").split()):
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img) ["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what shape is {element}?|| {answer}"]
-          entity_to_qa +=1
-      if element[0] == element[0].upper() or any(a in emotion_adj_set for a in ent2aug.get(element, "").split()):
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} feeling?",  img) ["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,5)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-          matched_output['qa'] = matched_output.get('qa',[]) +  [f"what is {element} feeling?|| {answer}"] 
-          entity_to_qa +=1
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| {answer}")]  
+            entity_to_qa +=1
       prev_element = element
     
-
 def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
@@ -345,8 +372,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         other_person_list.append(person)
         #augment the sentence with fake data
-        l, aug2ent,, qa_list  = augment_ents(l, do_person=True, do_loc=False, do_obj=False, other_person_list=other_person_list)
-        if qa: qa_list.append(qa)
+        l, aug2ent, qa_list  = augment_ents(l, do_person=True, do_loc=False, do_obj=False, other_person_list=other_person_list)
+        #if qa: qa_list.append(qa)
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
@@ -442,10 +469,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
-                    matched_output['qa'] = matched_output.get('qa',[]) + qa_list
+                    if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
                     decomposed2text = matched_output['decomposed2text']
                     #clip score of vlt5 caption against the image
-                    create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent)
+                    create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2text'], '***', matched_output.get('qa'))
@@ -490,8 +517,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img, get_cropped_images=True, verbose=verbose)
                       if matched_output2 and matched_output2['score'] >= mult*score_cutoff and len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
-                        matched_output2['qa'] = matched_output2.get('qa',[]) + qa_list
-                        create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent)
+                        create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['decomposed2text2'] = matched_output2['decomposed2text']
