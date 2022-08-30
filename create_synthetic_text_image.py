@@ -445,10 +445,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                          
                     if verbose:
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2text'], '***', matched_output.get('qa'))
-                      if 'annotated_image' in vlt5_output['frcnn_output']:
-                        display(vlt5_output['frcnn_output']['annotated_image'])
-                      else:
-                        display(img)
+                      display(img)
                     out.write(str(matched_output)+"\n")
                     dat_cnt += 1    
                     
