@@ -144,9 +144,13 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     aug2ent[aug_word] = e_text
     if e_label == 'PERSON' and simplify_person:
         aug_word_arr = aug_word.split()
+        if e_text.split()[-1] == aug_word_arr[-1]:
+          aug_word_arr[-1] = "person"
         if len(aug_word_arr) > 3:
           aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
-          aug2ent[aug_word] = aug_word2
+        else:
+          new_word2 = " ".join(aug_word_arr)
+        aug2ent[aug_word] = aug_word2
     seen[e_text.lower()] = 1
   if other_person_list:
     for aug_word in other_person_list:
@@ -341,8 +345,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         other_person_list.append(person)
         #augment the sentence with fake data
-        l, aug2ent  = augment_ents(l, do_person=True, do_loc=False, do_obj=False, other_person_list=other_person_list)
-        
+        l, aug2ent,, qa_list  = augment_ents(l, do_person=True, do_loc=False, do_obj=False, other_person_list=other_person_list)
+        if qa: qa_list.append(qa)
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
@@ -398,7 +402,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
               tokens.dtype = np.int16
               text2 = trimmed_text
               text2_arr = text2.replace("?", ". ").replace("!", ". ").replace("- ", ". ").replace(";", ". ").strip(".").replace("..", ".").replace("..", ".").replace("..", ".").replace("  ", " ").split(". ")
-              text3 = [t.strip() for t in  text2_arr]
+              text3 = [t.strip() for t in  text2_arr if len(t.strip()) > 20]
               if len(text2_arr) > 1: text3 = text3 + [text2]
               # find the sentence that is most like this picture, the last item being the complete text chunk
               sim1 = 0.0
@@ -438,8 +442,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
-                    if qa:
-                      matched_output['qa'] = matched_output.get('qa',[]) + qa
+                    matched_output['qa'] = matched_output.get('qa',[]) + qa_list
                     decomposed2text = matched_output['decomposed2text']
                     #clip score of vlt5 caption against the image
                     create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent)
@@ -470,10 +473,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       image_type = random.choice(["", "",  "", "", "",  "", "rendering of :", "vector art of: ", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
                       if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
                         mult = 1.0
-                        generated_sentence, aug2ent  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                        generated_sentence, aug2ent, qa_list  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                       else:
                         #drawings can be more unrealistic so we want a higher match
                         mult = 1.25
+                        qa_list = []
+                        
                       generated_sentence = image_type +generated_sentence
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
@@ -485,6 +490,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = orig_generated_sentence
                       matched_output2 = get_decomposed_sent_to_img(generated_sentence, img, get_cropped_images=True, verbose=verbose)
                       if matched_output2 and matched_output2['score'] >= mult*score_cutoff and len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
+                        matched_output2['qa'] = matched_output2.get('qa',[]) + qa_list
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent)
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
@@ -492,7 +498,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['score2'] = matched_output2['score']
                         matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
-                        matched_output['qa2'] = matched_output2['qa']
+                        matched_output['qa2'] = matched_output2.get('qa')
                         if verbose:
                             print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             display(img)  
