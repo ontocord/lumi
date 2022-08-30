@@ -126,7 +126,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     for x1,y1,x2,y2 in normalized_boxes:
       l = ((x2-x1) + (y2-y1))/2.0
       if l < 0.20: continue
-      cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x1+l)*shape[0]), int((y1+l)*shape[1])]
+      cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x2)*shape[0]), int((y2)*shape[1])]
       #print (cropped_img_coord)
       cropped_PIL_img = pil_image.crop(cropped_img_coord)
       imgs.append(np.array(cropped_PIL_img))
