@@ -122,17 +122,19 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       image = np.array(image)
   if normalized_boxes is not None:
     imgs = [image]
+    coords = []
     shape = pil_image.size
     for x1,y1,x2,y2 in normalized_boxes:
       l = ((x2-x1) + (y2-y1))/2.0
       if l < 0.20: continue
       cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x2)*shape[0]), int((y2)*shape[1])]
-      #print (cropped_img_coord)
+      coords.append(cropped_img_coord)
       cropped_PIL_img = pil_image.crop(cropped_img_coord)
       imgs.append(np.array(cropped_PIL_img))
       #display(cropped_PIL_img)  
   else:
-      imgs = [image]    
+    imgs = [image] 
+    coords = [[0,0,1,1]]
   if clip_vision_output is None:
     inputs = clip_processor(images=imgs, return_tensors="pt")
     if True: # with torch.no_grad():
@@ -159,8 +161,8 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     cropped_scores_topk = []
     cropped_scores = []
     cropped_image_features = image_features[1:]
-    print (scores)
-    print ('cropped_image_features.shape', cropped_image_features.shape)
+    #print (scores)
+    #print ('cropped_image_features.shape', cropped_image_features.shape)
     for cidx, tfeat in enumerate(text_features):
       scores2 =  min (1.0, (scores[cidx] + add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
       cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[0])))
@@ -203,7 +205,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     decomposed_scores = []
   
   return {'image': image, 'cropped_images': imgs[1:], 'normalized_boxes': normalized_boxes, \
-           'image_features': image_features, 'cropped2text': cropped2text, \
+           'coords': coords, 'image_features': image_features, 'cropped2text': cropped2text, \
            'decomposed_image_features': decomposed_image_features, 'decomposed2text': decomposed2text, \
            'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, \
            'clip_vision_output': clip_vision_output, 'text_features': text_features}
