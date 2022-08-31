@@ -66,7 +66,7 @@ mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyll
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
                       "hopeful", "angry", "fearful", "tense", "lonely"]
 image_type_lst = ["rendering", "vector art ", "scene", "movie still", \
-                      "textbook illustration", "realistic drawing", "sketch", "cartoon", "painting"])
+                      "textbook illustration", "realistic drawing", "sketch", "cartoon", "painting"]
                       
     
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
