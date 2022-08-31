@@ -615,7 +615,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             if image_type[-1] == "of":
                               image_type = image_type[:-1]
                             image_type = " ".join(image_type)
-                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture', f'what type of picture is this?||{image_type}")]
+                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture', f'what type of picture is this?||{image_type}')]
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['score2'] = matched_output2['score']
