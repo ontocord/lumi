@@ -130,7 +130,7 @@ def aug_person(person_str="", is_male=True):
 
 def simplify_aug(sentence, all_aug):
   if type(all_aug) is dict:
-    lst = all_aug.items()
+    lst = list(all_aug.items())
     lst.sort(key=lambda a: len(a[0]), reverse=True)
     for key, val in lst:
       sentence = sentence.replace(key, val)
