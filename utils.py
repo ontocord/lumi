@@ -178,10 +178,10 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
           cropped2text[idx] = (text, score, coords[idx])
           break
   else:
-    cropped2text = {}
-    cropped_scores_topk = [] 
-    cropped_scores = []
-    cropped_image_features  = []
+    cropped2text = None
+    cropped_scores_topk = None
+    cropped_scores = None
+    cropped_image_features  = None
 
   if decompose_image:
     decomposed_scores_topk = []
@@ -201,9 +201,9 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
           decomposed2text[idx] = (text, score)
           break
   else:
-    decomposed2text = {}
-    decomposed_scores_topk = [] 
-    decomposed_scores = []
+    decomposed2text = None
+    decomposed_scores_topk = None 
+    decomposed_scores = None
   
   return {'image': image, 'cropped_images': imgs[1:], 'image_features': image_features[0].unsqueeze(0),  \
            'normalized_boxes': normalized_boxes, 'coords': coords, 'cropped_image_features': cropped_image_features, 'cropped2text': cropped2text, \
