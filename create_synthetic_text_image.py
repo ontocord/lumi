@@ -61,6 +61,14 @@ sexual_orientation_lst_set = set(sexual_orientation_lst)
 political_affiliation_lst = ["conservative", "liberal", "moderate"]
 political_affiliation_lst_set = set(political_affiliation_lst)
 
+
+mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyllic", \
+                      "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
+                      "hopeful", "angry", "fearful", "tense", "lonely"]
+image_type_lst = ["rendering", "vector art ", "scene", "movie still", \
+                      "textbook illustration", "realistic drawing", "sketch", "cartoon", "painting"])
+                      
+    
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
   device = pytorch_device
@@ -148,7 +156,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
       if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}? || {political_affiliation[0]}"))
       if "person" not in the_person:
-        qa_list.append((the_person, f"what gender is the person? || {person}"))
+        qa_list.append((the_person, f"what gender is the person? || {the_person}"))
         
   qa_list = []
   aug2ent =  {}
@@ -580,7 +588,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       orig_generated_sentence = generated_sentence
                       
                       #augment the sentence with fake data
-                      image_type = random.choice(["", "",  "", "", "",  "", "rendering of :", "vector art of: ", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
+                      mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
+                      image_type = random.choice(["", "",  "", "", "",  "",] + image_type_lst)
                       if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
                         mult = 1.0
                         prob_add_qa_image_type = 0.5
@@ -590,8 +599,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         mult = 1.25
                         prob_add_qa_image_type = 1.0
                         qa_list = []
-                      
-                      generated_sentence = image_type +generated_sentence  
+                      prefix = mood_type + " " + ":" if not image_type else image_type +" of:"+
+                      prefix = prefix.replace("  ", " ").strip()
+                      if prefix:
+                        generated_sentence = prefix + " " + generated_sentence  
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
@@ -607,15 +618,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
-                        if random.random() <= prob_add_qa_image_type and "picture" not in image_type:
+                        if mood_type:
+                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]
+                        if random.random() <= prob_add_qa_image_type:
                           if image_type== "": 
                             image_type = "photo"
-                          else:
-                            image_type = image_type.strip(": ").split()
-                            if image_type[-1] == "of":
-                              image_type = image_type[:-1]
-                            image_type = " ".join(image_type)
-                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture', f'what type of picture is this?||{image_type}')]
+                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['score2'] = matched_output2['score']
