@@ -49,8 +49,17 @@ color_adj_set = set(color_adj)
 
 person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
 person_lst_set = set(person_lst)
-age_adj_lst = ["young", "teen", "young-adult", "middle-aged", "older", "senior"]
+age_adj_lst = ["young", "teen", "young-adult", "middle-aged", "old"]
 age_adj_set = set(age_adj_lst)
+
+religion_lst = ["christian", "muslim", "buddhist", "hindu"]
+religion_lst_set = set(religion_lst)
+race_lst = ["white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"]
+race_lst_set = set(race_lst)
+sexual_orientation_lst = ["gay", "straight", "bisexual",]
+sexual_orientation_lst_set = set(sexual_orientation_lst)
+political_affiliation_lst = ["conservative", "liberal", "moderate"]
+political_affiliation_lst_set = set(political_affiliation_lst)
 
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, stopwords_set, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
@@ -98,8 +107,8 @@ def aug_loc(loc_str=""):
 
 def aug_person(person_str="", is_male=True):
   norp = ""
-  norp += " " +random.choice(["", "", "", "", "", "", "", "", "gay", "straight", "bisexual", "conservative", "liberal", "moderate"] + emotion_adj)
-  norp += " " +random.choice(["", "", "", "", "", "", "", "", "christian", "muslim", "buddhist", "hindu",  "white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"])
+  norp += " " +random.choice(["", "", "", "", "", "", "", "", ] + sexual_orientation_lst + political_affiliation_lst  + emotion_adj)
+  norp += " " +random.choice(["", "", "", "", "", "", "", "", ] + religion_lst + race_lst ])
   norp += " " +random.choice(["", "", "", "", ] + age_adj_lst)
   if person_str and random.randint(0,1) == 0: 
     person = norp + " " + person_str
@@ -113,13 +122,34 @@ def aug_person(person_str="", is_male=True):
 
 def simplify_aug(sentence, all_aug):
   if type(all_aug) is dict:
-    for key, val in all_aug.items():
+    lst = all_aug.items()
+    lst.sort(key=lambda a: len(a[0]), reverse=True)
+    for key, val in lst:
       sentence = sentence.replace(key, val)
   return sentence
 
 
 def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=True, prob_of_swap=.33, other_person_list=[]):
   global spacy_nlp
+  def get_person_questions(aug_word, qa_list):
+      the_person =  " ".join(aug_word.split()[-2:])
+      if the_person not in person_lst_set: the_person = "person"
+      emotion = [a for a in aug_word.split() if a in emotion_adj_set]
+      if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
+      age = [a for a in aug_word.split() if a in age_adj_set]
+      if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))
+      the_person = the_person.split()[-1]
+      religion = [a for a in aug_word.split() if a in religion_lst_set]
+      if religion: qa_list.append((the_person, f"what religion is {the_person}? || {religion[0]}"))
+      race = [a for a in aug_word.split() if a in race_lst_set]
+      if race: qa_list.append((the_person, f"what race is {the_person}? || {race[0]}"))
+      sexual_orientation = [a for a in aug_word.split() if a in sexual_orientation_lst_set]
+      if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}? || {sexual_orientation[0]}"))
+      political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
+      if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}? || {political_affiliation[0]}"))
+      if "person" not in the_person:
+        qa_list.append((the_person, f"what gender is the person? || {person}"))
+        
   qa_list = []
   aug2ent =  {}
   seen = {}
@@ -127,6 +157,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
   ents = [(e.text, e.label_) for e in doc.ents]
   if do_obj: 
     ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
+    
   for e_text, e_label in list(set(ents)):
     e_text = e_text.strip("()[]0123456789-:,.+? ")
     if not e_text: continue
@@ -144,15 +175,10 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         if shape: qa_list.append((thing, f"what shape is {thing}? || {shape[0]}"))
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
-        the_person =  " ".join(aug_word.split()[-2:])
-        if the_person not in person_lst_set: the_person = "person"
-        emotion = [a for a in aug_word.split() if a in emotion_adj_set]
-        if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
-        age = [a for a in aug_word.split() if a in age_adj_set]
-        if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))          
+        get_person_questions(aug_word, qa_list)        
     elif e_label in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ') and do_obj:
         aug_word =  aug_obj(e_text)
-        thing =  " ".join(aug_word.split()[-2:])
+        thing =  " ".join(aug_word.split()[1:])
         color = [a for a in aug_word.split() if a in color_adj_set]
         if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
     else:
@@ -168,20 +194,17 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         else:
           aug_word2 = " ".join(aug_word_arr)
         aug2ent[aug_word] = aug_word2
-        
     seen[e_text.lower()] = 1
+    
   if other_person_list:
     for aug_word in other_person_list:
-      the_person =  " ".join(aug_word.split()[-2:])
-      if the_person not in person_lst_set: the_person = "person"
-      emotion = [a for a in aug_word.split() if a in emotion_adj_set]
-      if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
-      age = [a for a in aug_word.split() if a in age_adj_set]
-      if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))      
+      get_person_questions(aug_word, qa_list)
+      aug2ent[aug_word] = aug_word
       aug_word_arr = aug_word.split()
-      if len(aug_word_arr) > 3:
+      if len(aug_word_arr) > 3 and simplify_person:
           aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
+          
   return l, aug2ent, qa_list
 
 
@@ -241,7 +264,8 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
   if decomposed2text:
     for element, score in decomposed2text.values():
       if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
-       
+        
+  # create some qa from coordinates of elements     
   cropped2text = matched_output.get('cropped2text', {})
   if cropped2text:
     background_element = None
@@ -258,31 +282,50 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
           prev_element, prev_score, prev_coord = prev_small_element
           if coord[0] - prev_coord[0] > 25: 
             if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| left")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| left")] 
             else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {prev_element}?|| right")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| right")] 
             prev_small_element = None
             continue
           elif coord[2] - prev_coord[2] > 25:  
             if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| above")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| above")] 
             else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {prev_element}?|| below")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| below")] 
             prev_small_element = None
             continue            
         if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25):
           if  background_element:
             if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is in {background_element} in relation to {element}?|| behind")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?|| behind")] 
             else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is in {element} in relation to {background_element}?|| in front")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
             background_element= None
+          if coord[1] < 25:
+            if random.randint(0,1) == 0:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
+            else:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| far")] 
+          elif coord[1] > 75:
+            if random.randint(0,1) == 0:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
+            else:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| near")]
+          elif coord[0] < 25:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
+          elif coord[0] > 75:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
+          elif coord[0] > 40 and coord[0] < 60 and coord[1] > 40 and coord[1] < 60:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
           prev_small_element = (element, score, coord)
-          continue
+          continue  
           
+  # add some pre-created qa's
   for entity, question in potential_qa_list:
     if entity in l:
       matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
+      
+  # now do some vlt5 qa
   prev_element = "" 
   if " woman " in l:
     person = "woman"
@@ -309,12 +352,12 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
       if entity_to_qa >= max_qa: break
       color = [a for a in element.split() if a in color_adj_set]
       shape = [a for a in element.split() if a in shape_adj_set]
-      if shape: 
+      if shape and random.randint(0,3) == 0: 
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what shape is {element}?|| {answer}")] 
             entity_to_qa +=1
-      elif color: 
+      elif color and random.randint(0,3) == 0: 
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what color is {element}?|| {answer}")] 
@@ -334,7 +377,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}")] 
             entity_to_qa +=1
-      else:
+      elif not any(a for a in matched_output.get('qa',[]) if f"where is {element}?" not in a[1]):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| {answer}")]  
