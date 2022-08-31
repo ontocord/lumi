@@ -511,10 +511,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       cropped2text = matched_output['cropped2text']
                       if cropped2text:
                         for idx, vals in cropped2text.items():
-                          if vals[1] > 0.20:
-                              ci = cropped_images[idx]
-                              print (vals)
-                              display(PIL.Image.fromarray(ci))
+                          ci = cropped_images[idx]
+                          print (vals)
+                          display(PIL.Image.fromarray(ci))
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2text'], '***', matched_output.get('qa'))
                       display(img)
                       
@@ -577,10 +576,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           cropped2text = matched_output2['cropped2text']
                           if cropped2text:
                             for idx, vals in cropped2text.items():
-                              if vals[1] > 0.20:
-                                  ci = cropped_images[idx]
-                                  print (vals)
-                                  display(PIL.Image.fromarray(ci))
+                              ci = cropped_images[idx]
+                              print (vals)
+                              display(PIL.Image.fromarray(ci))
 
                             print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             display(img)  
