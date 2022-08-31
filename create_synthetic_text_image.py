@@ -260,14 +260,14 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
             if random.randint(0,1) == 0:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| left")] 
             else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {pre_element}?|| right")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {prev_element}?|| right")] 
             prev_small_element = None
             continue
           elif coord[2] - prev_coord[2] > 25:  
             if random.randint(0,1) == 0:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| above")] 
             else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {pre_element}?|| below")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {prev_element}?|| below")] 
             prev_small_element = None
             continue            
         if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25):
@@ -307,6 +307,18 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
     if element not in l: continue
     if score >= score_cutoff: 
       if entity_to_qa >= max_qa: break
+      color = [a for a in element.split() if a in color_adj_set]
+      shape = [a for a in element.split() if a in shape_adj_set]
+      if shape: 
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what shape is {element}?|| {answer}")] 
+            entity_to_qa +=1
+      elif color: 
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what color is {element}?|| {answer}")] 
+            entity_to_qa +=1
       if random.randint(0,1) == 0:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
