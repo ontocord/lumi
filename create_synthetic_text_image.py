@@ -583,13 +583,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       image_type = random.choice(["", "",  "", "", "",  "", "rendering of :", "vector art of: ", "scene of: ", "movie still of: ", "textbook illustration of: ", "realistic drawing: ", "picture of: ", "sketch of: ", "cartoon of: ", "painting of: "])
                       if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
                         mult = 1.0
+                        prob_add_qa_image_type = 0.5
                         generated_sentence, aug2ent, qa_list  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                       else:
                         #drawings can be more unrealistic so we want a higher match
                         mult = 1.25
+                        prob_add_qa_image_type = 1.0
                         qa_list = []
-                        
-                      generated_sentence = image_type +generated_sentence
+                      
+                      generated_sentence = image_type +generated_sentence  
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
@@ -605,6 +607,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
+                        if random.random() <= prob_add_qa_image_type and "picture" not in image_type:
+                          if image_type== "": 
+                            image_type = "photo"
+                          else:
+                            image_type = image_type.strip(": ").split()
+                            if image_type[-1] == "of":
+                              image_type = image_type[:-1]
+                            image_type = " ".join(image_type)
+                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture', f'what type of picture is this?||{image_type}")]
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['score2'] = matched_output2['score']
