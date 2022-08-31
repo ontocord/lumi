@@ -225,9 +225,9 @@ def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
       matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'cropped2text': clip_output['cropped2text'], \
-                              'cropped_image_features': clip_output['cropped_image_features'].cpu().numpy().tostring(),  \
+                              'cropped_image_features': None if clip_output['cropped_image_features'] is None else clip_output['cropped_image_features'].cpu().numpy().tostring(),  \
                               'decomposed2text': clip_output['decomposed2text'], \
-                              'decomposed_image_features': clip_output['decomposed_image_features'].cpu().numpy().tostring(),\
+                              'decomposed_image_features': None if clip_output['decomposed_image_features'] is None else  clip_output['decomposed_image_features'].cpu().numpy().tostring(),\
                               'image_features': clip_output['image_features'].cpu().numpy().tostring(),\
                        }
       return matched_output, clip_output['cropped_images']
