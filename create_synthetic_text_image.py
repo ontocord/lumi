@@ -599,8 +599,13 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         mult = 1.25
                         prob_add_qa_image_type = 1.0
                         qa_list = []
-                      prefix = mood_type + " " + ":" if not image_type else image_type +" of:"+
+                      if modd_type and not image_type:
+                        prefix =  mood_type + " picture of:" 
+                      else:
+                        prefix = mood_type + " " + ":" if not image_type else image_type +" of:"
                       prefix = prefix.replace("  ", " ").strip()
+                      prefix = prefix.lstrip(": ")
+                      print (prefix)
                       if prefix:
                         generated_sentence = prefix + " " + generated_sentence  
                       #generate an image 
