@@ -194,7 +194,7 @@ def strip_left_stopwords(e_text):
         e_text2.append(et)
   return " ".join(e_text2)
 
-def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=5, verbose=False):
+def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=5):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
@@ -219,15 +219,6 @@ def get_decomposed_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cro
       clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True)  
 
     if clip_output is not None:
-      if verbose:
-        cropped2text = clip_output['cropped2text']
-        imgs = clip_output['cropped_images'] 
-        if cropped2text:
-          for idx, vals in cropped2text.items():
-            if vals[1] > 0.20:
-                ci = imgs[idx]
-                display(PIL.Image.fromarray(ci))
-                print (vals)
       #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
       #image is shape = [100,100,3], dtype="uint8"
       #tokens is [1, 1028] int16
@@ -249,23 +240,50 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
   decomposed2text = matched_output.get('decomposed2text', {})
   if decomposed2text:
     for element, score in decomposed2text.values():
-      if element in l: ent2score[element] = score
+      if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
+       
   cropped2text = matched_output.get('cropped2text', {})
   if cropped2text:
-    for element, score in cropped2text.values():
-      if element in l: ent2score[element] = score
+    background_element = None
+    prev_small_element = None
+    for element, score, coord in cropped2text.values():
+      if element not in l: continue
+      if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
+      if score >= score_cutoff:
+        if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
+          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?|| {element}")] 
+          background_element = element
+          continue
+        if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25) and prev_small_element:
+          prev_element, prev_score, prev_coord = prev_small_element
+          if coord[0] - prev_coord[0] > 25: 
+            if random.randint(0,1) == 0:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| left")] 
+            else:         
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {pre_element}?|| right")] 
+            prev_small_element = None
+            continue
+          elif coord[2] - prev_coord[2] > 25:  
+            if random.randint(0,1) == 0:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {prev_element} in relation to {element}?|| above")] 
+            else:         
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is in {element} in relation to {pre_element}?|| below")] 
+            prev_small_element = None
+            continue            
+        if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25):
+          if  background_element:
+            if random.randint(0,1) == 0:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is in {background_element} in relation to {element}?|| behind")] 
+            else:         
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is in {element} in relation to {background_element}?|| in front")] 
+            background_element= None
+          prev_small_element = (element, score, coord)
+          continue
+          
   for entity, question in potential_qa_list:
     if entity in l:
       matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
-  prev_element = ""
-  if random.randint(0,3) == 0:
-    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the background?",  img)["text"]
-    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("mirror", "nothing", "nowhere", "unknown", "black", "white")): 
-      matched_output['qa'] = matched_output.get('qa',[]) +  [('background', f"what is in the background?|| {answer}")]    
-  elif random.randint(0,3) == 0:
-    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in the foreground?",  img)["text"]
-    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("mirror", "nothing", "nowhere", "unknown", "black", "white")): 
-      matched_output['qa'] = matched_output.get('qa',[]) +  [('foreground', f"what is in the foreground?|| {answer}")]    
+  prev_element = "" 
   if " woman " in l:
     person = "woman"
   elif " girl " in l:
@@ -462,10 +480,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     next_text = simplify_aug((next_text +" "+ next_text2).strip(" ."), aug2ent)  
                 
                 #let's do some cleanup of the ents since we injected more information then is in natural text
-                matched_sentence = simplify_aug(matched_sentence, aug2ent)
+                matched_sentence, cropped_images = simplify_aug(matched_sentence, aug2ent)
                 # now find the entities and important verbs in the most similar sentence. also see if the caption generated by vlt5 is any good.
-                matched_output = get_decomposed_sent_to_img(matched_sentence, img, get_cropped_images=True, verbose=verbose)
-                if matched_output and matched_output2['score'] >= score_cutoff and \
+                matched_output = get_decomposed_sent_to_img(matched_sentence, img, get_cropped_images=True)
+                if matched_output and matched_output['score'] >= score_cutoff and \
                   any(a for a in matched_output['decomposed2text'].values() if a[1] > score_cutoff) and \
                   any(a for a in matched_output['cropped2text'].values() if a[1] > score_cutoff):
                     matched_output['tokens'] = tokens.tostring()
@@ -478,8 +496,16 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
                          
                     if verbose:
+                      cropped2text = matched_output['cropped2text']
+                      if cropped2text:
+                        for idx, vals in cropped2text.items():
+                          if vals[1] > 0.20:
+                              ci = cropped_images[idx]
+                              print (vals)
+                              display(PIL.Image.fromarray(ci))
                       print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2text'], '***', matched_output.get('qa'))
                       display(img)
+                      
                     out.write(str(matched_output)+"\n")
                     dat_cnt += 1    
                     
@@ -518,7 +544,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       
                       # we only use the fake data to generate the image. the text2img matching uses the original sentence.
                       generated_sentence = orig_generated_sentence
-                      matched_output2 = get_decomposed_sent_to_img(generated_sentence, img, get_cropped_images=True, verbose=verbose)
+                      matched_output2, cropped_images = get_decomposed_sent_to_img(generated_sentence, img, get_cropped_images=True)
                       if matched_output2 and \
                           any(a for a in matched_output['decomposed2text'].values() if a[1] > score_cutoff) and \
                           any(a for a in matched_output['cropped2text'].values() if a[1] > score_cutoff) and \
@@ -536,6 +562,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
                         matched_output['qa2'] = matched_output2.get('qa')
                         if verbose:
+                          cropped2text = matched_output2['cropped2text']
+                          if cropped2text:
+                            for idx, vals in cropped2text.items():
+                              if vals[1] > 0.20:
+                                  ci = cropped_images[idx]
+                                  print (vals)
+                                  display(PIL.Image.fromarray(ci))
+
                             print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             display(img)  
                         dat_cnt += 1
