@@ -551,15 +551,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 matched_output, cropped_images = get_sent_to_img(matched_sentence, img, get_cropped_images=True, other_sent_arr=distractors )
                 distractor_is_best_match = False
                 if matched_output and matched_output['decomposed2text'] and matched_output['cropped2text']:
-                          items = list(matched_output['decomposed2text'].values())
-                          items.sort(key=lambda a: a[1])
-                          if items[-1] in items:
-                            distractor_is_best_match = True
-                          else
-                            items = list(matched_output['cropped2text'].values())
-                            items.sort(key=lambda a: a[1])
-                            if items[-1] in items:
-                              distractor_is_best_match = True
+                    items = list(matched_output['decomposed2text'].values())
+                    items.sort(key=lambda a: a[1])
+                    if items[-1] in items:
+                       distractor_is_best_match = True
+                    else:
+                       items = list(matched_output['cropped2text'].values())
+                       items.sort(key=lambda a: a[1])
+                        if items[-1] in items:
+                           distractor_is_best_match = True
                 if matched_output and not distractor_is_best_match and matched_output['score'] >= score_cutoff and \
                   (not matched_output['decomposed2text'] or any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)) and \
                   (not matched_output['cropped2text'] or any(a for a in matched_output['cropped2text'].values() if a[1] >= score_cutoff)):
@@ -641,7 +641,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           items.sort(key=lambda a: a[1])
                           if items[-1] in items:
                             distractor_is_best_match = True
-                          else
+                          else:
                             items = list(matched_output2['cropped2text'].values())
                             items.sort(key=lambda a: a[1])
                             if items[-1] in items:
