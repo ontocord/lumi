@@ -128,6 +128,7 @@ def aug_person(person_str="", is_male=True):
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person").replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person")
   return person.strip()
 
+
 def simplify_aug(sentence, all_aug):
   if type(all_aug) is dict:
     lst = list(all_aug.items())
@@ -136,6 +137,15 @@ def simplify_aug(sentence, all_aug):
       sentence = sentence.replace(key, val)
   return sentence
 
+def re_augment(sentence, all_aug):
+  if type(all_aug) is dict:
+    lst = list(all_aug.items())
+    lst.sort(key=lambda a: len(a[0]), reverse=True)
+    for i, key_val in enumerate(lst):
+      sentence = sentence.replace(key_val[1], '**'+str(i)+'**')
+    for i, key_val in enumerate(lst):
+      sentence = sentence.replace('**'+str(i)+'**', key_val[0])      
+  return sentence
 
 def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=True, prob_of_swap=.33, other_person_list=[]):
   global spacy_nlp
@@ -607,12 +617,16 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
                         mult = 1.0
                         prob_add_qa_image_type = 0.5
-                        generated_sentence, aug2ent, qa_list  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                        generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                        generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
+                        aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
+                        qa_list_gen = qa_list_gen + qa_list
                       else:
                         #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
                         mult = 1.25
                         prob_add_qa_image_type = 1.0
-                        qa_list = []
+                        qa_list_gen = qa_list
+                        aug2ent_gen  aug2ent
                         
                       prefix = ""
                       if mood_type and not image_type:
@@ -631,8 +645,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
                       prefix = prefix.replace(' of:', '')
-                      # we only use the fake data to generate the image. the text2img matching uses the original sentence.
-                      generated_sentence = orig_generated_sentence
+                      # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
+                      generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
                       distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['a clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                       matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, other_sent_arr=distractors+([prefix] if prefix else []), \
                                                                         entities=[] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
@@ -663,7 +677,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           distractors = set(list(distractors) + [prefix])
                         if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
                         if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
-                        create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
+                        create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent_gen, potential_qa_list=qa_list_gen)
                         if mood_type:
                           matched_output2['qa'] = matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]
                         if random.random() <= prob_add_qa_image_type:
@@ -688,7 +702,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               ci = cropped_images[idx]
                               print (vals)
                               if in_notebook: display(PIL.Image.fromarray(ci))
-                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
+                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             if in_notebook: display(img)  
                     else:
                       pass
