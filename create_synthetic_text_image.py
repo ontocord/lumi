@@ -558,11 +558,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     items.sort(key=lambda a: a[1])
                     if items[-1][0] in distractors:
                        distractor_is_best_match = True
-                    else:
-                       items = list(matched_output['cropped2text'].values())
-                       items.sort(key=lambda a: a[1])
-                       if items[-1][0] in distractors:
-                           distractor_is_best_match = True
                 if not matched_output or  distractor_is_best_match or matched_output['score'] < score_cutoff or \
                       (matched_output['decomposed2text'] and not any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)):
                     #this is an undrawable sentence
@@ -658,12 +653,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if items[-1][0] in distractors:
                             distractor_is_best_match = True
                             print ('distractor 1', items)
-                          else:
-                            items = list(matched_output2['cropped2text'].values())
-                            items.sort(key=lambda a: a[1])
-                            if items[-1][0] in distractors:
-                              distractor_is_best_match = True
-                              print ('distractor 2', items)
                       if matched_output2 and not distractor_is_best_match and \
                           matched_output2['decomposed2text'] and \
                           matched_output2['score'] >= mult*score_cutoff and \
