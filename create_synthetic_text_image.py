@@ -43,7 +43,7 @@ shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shape
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
 shape_adj_set = set(shape_adj)
-color_adj = ["brown", "black", "blue", "gray", "green", "pink", "purple", "red", "white", "yellow",  "orange"] #orange confuses image generators to generate an orange fruit
+color_adj = ["brown", "black", "blue", "gray", "green", "pink", "purple", "red", "white", "yellow",] #orange confuses image generators to generate an orange fruit
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
@@ -279,123 +279,133 @@ def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images
       return matched_output, clip_output['cropped_images']
   return None, None    
 
-def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potential_qa_list=[]):
+def create_qa_from_(l, img,  aug2ent, max_qa=10, potential_qa_list=[], do_vlt5=True):
+    ent2score = dict([(a,.1) for a in aug2ent.values() if a in l]+[(a,.1) for a in aug2ent.keys() if a in l])  
+    # now do some vlt5 qa
+    prev_element = "" 
+    if " woman " in l:
+      person = "woman"
+    elif " girl " in l:
+      person = "girl"
+    elif " boy " in l:
+      person = "boy"
+    elif " man " in l:
+      person = "man"
+    elif " person " in l:
+      person = "person"
+    else:
+      person = ""
+    if person and not any(a for a in matched_output.get('qa',[]) if f"what is {person} feeling?" not in a[1]):
+        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+          answer2qa[answer] =  (person, f"what is {person} feeling?|| {answer}")
+    entity_to_qa = 0    
+    elements = list(ent2score.items())
+    elements.sort(key=lambda a: a[1], reverse=True)
+    answer2qa = {}
+    for element, score in elements:
+      if element not in l: continue
+      if score >= score_cutoff: 
+        if entity_to_qa >= max_qa: break
+        color = [a for a in element.split() if a in color_adj_set]
+        shape = [a for a in element.split() if a in shape_adj_set]
+        if shape and random.randint(0,3) == 0: 
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              entity_to_qa +=1
+        elif color and random.randint(0,3) == 0: 
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              answer2qa[answer] =  (element, f"what is {element} doing?|| {answer}")
+              entity_to_qa +=1
+        elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              answer2qa[answer] =  (element, f"what is {element} doing?|| {answer}")
+              entity_to_qa +=1
+        elif random.randint(0,1) == 0:
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              answer2qa[answer] =  (element, f"what is {element} for?|| {answer}")
+              entity_to_qa +=1
+        elif random.randint(0,1) == 0 and prev_element:
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              answer2qa[answer] =  (element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}")
+              entity_to_qa +=1
+        elif not any(a for a in matched_output.get('qa',[]) if f"where is {element}?" not in a[1]):
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              answer2qa[answer] =  (element, f"where is {element}?|| {answer}")
+              entity_to_qa +=1
+        prev_element = element
+  return answer2qa
+                    
+def create_qa(matched_output, img, score_cutoff, aug2ent, max_qa=10, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
   l = matched_output["matched_sentence"]
-  ent2score = dict([(a,.01) for a in aug2ent.values() if a in l]+[(a,.01) for a in aug2ent.keys() if a in l])
-  decomposed2text = matched_output.get('decomposed2text', {})
-  if decomposed2text:
-    for element, score in decomposed2text.values():
-      if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
-        
-  # create some qa from coordinates of elements     
-  cropped2text = matched_output.get('cropped2text', {})
-  if cropped2text:
-    background_element = None
-    prev_small_element = None
-    for element, score, coord in cropped2text.values():
-      if element not in l: continue
-      if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
-      if score >= score_cutoff:
-        if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
-          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?|| {element}")] 
-          background_element = element
-          continue
-        if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25) and prev_small_element:
-          prev_element, prev_score, prev_coord = prev_small_element
-          if coord[0] - prev_coord[0] > 25: 
-            if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| left")] 
-            else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| right")] 
-            prev_small_element = None
+  ent2score = dict([(a,.1) for a in aug2ent.values() if a in l]+[(a,.1) for a in aug2ent.keys() if a in l])
+  if matched_output:
+    decomposed2text = matched_output.get('decomposed2text', {})
+    if decomposed2text:
+      for element, score in decomposed2text.values():
+        if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
+
+    # create some qa from coordinates of elements     
+    cropped2text = matched_output.get('cropped2text', {})
+    if cropped2text:
+      background_element = None
+      prev_small_element = None
+      for element, score, coord in cropped2text.values():
+        if element not in l: continue
+        if element in l: ent2score[element] = max(ent2score.get(element, 0), score)
+        if score >= score_cutoff:
+          if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?|| {element}")] 
+            background_element = element
             continue
-          elif coord[2] - prev_coord[2] > 25:  
-            if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| above")] 
-            else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| below")] 
-            prev_small_element = None
-            continue            
-        if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
-          if  background_element:
-            if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?|| behind")] 
-            else:         
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
-            background_element= None
-          if coord[0] < 25:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
-          elif coord[0] > 75:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
-          elif coord[0] > 40 and coord[0] < 60 and coord[1] > 40 and coord[1] < 60:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
-          elif coord[1] < 25:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
-          elif coord[1] > 75:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
-          if coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
-          continue  
+          if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25) and prev_small_element:
+            prev_element, prev_score, prev_coord = prev_small_element
+            if coord[0] - prev_coord[0] > 25: 
+              if random.randint(0,1) == 0:
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| left")] 
+              else:         
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| right")] 
+              prev_small_element = None
+              continue
+            elif coord[2] - prev_coord[2] > 25:  
+              if random.randint(0,1) == 0:
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| above")] 
+              else:         
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| below")] 
+              prev_small_element = None
+              continue            
+          if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
+            if  background_element:
+              if random.randint(0,1) == 0:
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?|| behind")] 
+              else:         
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
+              background_element= None
+            if coord[0] < 25:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
+            elif coord[0] > 75:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
+            elif coord[0] > 40 and coord[0] < 60 and coord[1] > 40 and coord[1] < 60:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
+            elif coord[1] < 25:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
+            elif coord[1] > 75:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
+            if coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
+            continue  
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
     if entity in l:
       matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
-      
-  # now do some vlt5 qa
-  prev_element = "" 
-  if " woman " in l:
-    person = "woman"
-  elif " girl " in l:
-    person = "girl"
-  elif " boy " in l:
-    person = "boy"
-  elif " man " in l:
-    person = "man"
-  elif " person " in l:
-    person = "person"
-  else:
-    person = ""
-  if person and not any(a for a in matched_output.get('qa',[]) if f"what is {person} feeling?" not in a[1]):
-      answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
-      if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-        matched_output['qa'] = matched_output.get('qa',[]) +  [(person, f"what is {person} feeling?|| {answer}")]    
-  entity_to_qa = 0    
-  elements = list(ent2score.items())
-  elements.sort(key=lambda a: a[1], reverse=True)
-  for element, score in elements:
-    if element not in l: continue
-    if score >= score_cutoff: 
-      if entity_to_qa >= max_qa: break
-      color = [a for a in element.split() if a in color_adj_set]
-      shape = [a for a in element.split() if a in shape_adj_set]
-      if shape and random.randint(0,3) == 0: 
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what shape is {element}?|| {answer}")] 
-            entity_to_qa +=1
-      elif color and random.randint(0,3) == 0: 
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what color is {element}?|| {answer}")] 
-            entity_to_qa +=1
-      elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("standing", "sitting", "nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} doing?|| {answer}")] 
-            entity_to_qa +=1
-      elif random.randint(0,1) == 0 and prev_element:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("toilet", "bathroom", "mirror", "nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}")] 
-            entity_to_qa +=1
-      elif not any(a for a in matched_output.get('qa',[]) if f"where is {element}?" not in a[1]):
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| {answer}")]  
-            entity_to_qa +=1
-      prev_element = element
-    
+     
+
 def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
