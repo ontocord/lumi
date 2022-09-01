@@ -37,7 +37,7 @@ except:
 
 emotion_adj = ["surprised", "angry", "sad", "contemptous", "disgusted", "fearful", "happy"]
 emotion_adj_set = set(emotion_adj)
-shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shaped", "watermelon-shaped", "orange-shaped", blueberry-shaped", 
+shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shaped", "watermelon-shaped", "orange-shaped", "blueberry-shaped", 
              "lemon-shaped", "large", "small", "medium", "tall", "broad", "crooked", \
              "curved", "deep", "even", "flat", "hilly", "jagged", \
               "round", "shallow", "square", "steep", "straight", "thick", \
