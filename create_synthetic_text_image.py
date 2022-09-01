@@ -626,7 +626,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         mult = 1.25
                         prob_add_qa_image_type = 1.0
                         qa_list_gen = qa_list
-                        aug2ent_gen  aug2ent
+                        aug2ent_gen = aug2ent
                         
                       prefix = ""
                       if mood_type and not image_type:
