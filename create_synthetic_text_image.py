@@ -373,7 +373,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
             entity_to_qa +=1
       elif random.randint(0,1) == 0 and prev_element:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("toilet", "bathroom", "mirror", "nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}")] 
             entity_to_qa +=1
       elif not any(a for a in matched_output.get('qa',[]) if f"where is {element}?" not in a[1]):
