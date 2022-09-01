@@ -649,8 +649,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         
                         if prefix:
-                          if not ((matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.25)) or \
-                             (matched_output2['cropped2text'] and any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.25))): 
+                          if not ((matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15)) or \
+                             (matched_output2['cropped2text'] and any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15))): 
                             mood_type = image_type = None                           
                         if prefix:
                           distractors = set(list(distractors) + [prefix])
