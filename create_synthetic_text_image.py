@@ -311,22 +311,16 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
             else:         
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
             background_element= None
-          if coord[1] < 25:
-            if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
-            else:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| far")] 
-          elif coord[1] > 75:
-            if random.randint(0,1) == 0:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
-            else:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| near")]
-          elif coord[0] < 25:
+          if coord[0] < 25:
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
           elif coord[0] > 75:
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
           elif coord[0] > 40 and coord[0] < 60 and coord[1] > 40 and coord[1] < 60:
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
+          elif coord[1] < 25:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
+          elif coord[1] > 75:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
           prev_small_element = (element, score, coord)
           continue  
           
