@@ -558,7 +558,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     else:
                        items = list(matched_output['cropped2text'].values())
                        items.sort(key=lambda a: a[1])
-                        if items[-1] in items:
+                       if items[-1] in items:
                            distractor_is_best_match = True
                 if matched_output and not distractor_is_best_match and matched_output['score'] >= score_cutoff and \
                   (not matched_output['decomposed2text'] or any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)) and \
