@@ -212,7 +212,10 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       if len(aug_word_arr) > 3 and simplify_person:
           aug_word2 = ("" if aug_word_arr[0] != "the" else "the") +" " + " ".join(aug_word_arr[-2:])
           aug2ent[aug_word] = aug_word2
-          
+  
+  l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
+  l = l.replace(" an the", " the").replace(" a the", " the").replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
+  l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")          
   return l, aug2ent, qa_list
 
 
@@ -551,8 +554,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                        if items[-1][0] in distractors:
                            distractor_is_best_match = True
                 if not matched_output or  distractor_is_best_match or matched_output['score'] < score_cutoff or \
-                  not ((not matched_output['decomposed2text'] or any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)) and \
-                      (not matched_output['cropped2text'] or any(a for a in matched_output['cropped2text'].values() if a[1] >= score_cutoff))):
+                      (matched_output['decomposed2text'] and any(a for a in matched_output['decomposed2text'].values() if a[1] < score_cutoff)):
                     #this is an undrawable sentence
                     matched_output = {}
                     matched_output['matched_sentence'] = matched_sentence
@@ -607,7 +609,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         prob_add_qa_image_type = 0.5
                         generated_sentence, aug2ent, qa_list  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                       else:
-                        #drawings can be more unrealistic so we want a higher match
+                        #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
                         mult = 1.25
                         prob_add_qa_image_type = 1.0
                         qa_list = []
@@ -641,14 +643,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           items.sort(key=lambda a: a[1])
                           if items[-1][0] in distractors:
                             distractor_is_best_match = True
+                            print ('distractor 1', items)
                           else:
                             items = list(matched_output2['cropped2text'].values())
                             items.sort(key=lambda a: a[1])
                             if items[-1][0] in distractors:
                               distractor_is_best_match = True
+                              print ('distractor 2', items)
                       if matched_output2 and not distractor_is_best_match and \
-                          (not matched_output2['decomposed2text'] or any(a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff)) and \
-                          (not matched_output2['cropped2text'] or any(a for a in matched_output2['cropped2text'].values() if a[1] >= score_cutoff)) and \
+                          (not matched_output2['decomposed2text'] or any(a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff))) and \
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         
