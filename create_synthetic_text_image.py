@@ -556,13 +556,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     items.sort(key=lambda a: a[1])
                     if items[-1][0] in distractors:
                        distractor_is_best_match = True
-                       print ('a', items)
                     else:
                        items = list(matched_output['cropped2text'].values())
                        items.sort(key=lambda a: a[1])
                        if items[-1][0] in distractors:
                            distractor_is_best_match = True
-                           print ('b', items)
+                           
                 if matched_output and not distractor_is_best_match and matched_output['score'] >= score_cutoff and \
                   (not matched_output['decomposed2text'] or any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)) and \
                   (not matched_output['cropped2text'] or any(a for a in matched_output['cropped2text'].values() if a[1] >= score_cutoff)):
@@ -634,7 +633,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       prefix = prefix.replace(' of:', '')
                       # we only use the fake data to generate the image. the text2img matching uses the original sentence.
                       generated_sentence = orig_generated_sentence
-                      distractors=([] if 'network' in generted_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['a clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
+                      distractors=([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['a clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                       matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, other_sent_arr=distractors+([prefix] if prefix else []), \
                                                                         entities=[] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
                       distractors = set(distractors)
@@ -644,13 +643,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           items.sort(key=lambda a: a[1])
                           if items[-1][0] in distractors:
                             distractor_is_best_match = True
-                            print ('c', items)
                           else:
                             items = list(matched_output2['cropped2text'].values())
                             items.sort(key=lambda a: a[1])
                             if items[-1][0] in distractors:
                               distractor_is_best_match = True
-                              print ('d', items)
                       if matched_output2 and not distractor_is_best_match and \
                           (not matched_output2['decomposed2text'] or any(a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff)) and \
                           (not matched_output2['cropped2text'] or any(a for a in matched_output2['cropped2text'].values() if a[1] >= score_cutoff)) and \
