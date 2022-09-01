@@ -37,13 +37,14 @@ except:
 
 emotion_adj = ["surprised", "angry", "sad", "contemptous", "disgusted", "fearful", "happy"]
 emotion_adj_set = set(emotion_adj)
-shape_adj = ["near", "far", "large", "small", "medium", "tall", "broad", "crooked", \
+shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shaped", "watermelon-shaped", "orange-shaped", blueberry-shaped", 
+             "lemon-shaped", "large", "small", "medium", "tall", "broad", "crooked", \
              "curved", "deep", "even", "flat", "hilly", "jagged", \
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
 shape_adj_set = set(shape_adj)
 color_adj = ["brown", "black", "blue", "gray", "green", \
-             "pink", "purple", "red", "white", "yellow"] # "orange", confuses image generators to generate an orange fruit
+             "pink", "purple", "red", "white", "yellow",  "orange"], #orange confuses image generators to generate an orange fruit
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
@@ -366,7 +367,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what color is {element}?|| {answer}")] 
             entity_to_qa +=1
-      if random.randint(0,1) == 0:
+      if random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} doing?|| {answer}")] 
