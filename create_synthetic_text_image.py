@@ -43,8 +43,7 @@ shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shape
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
 shape_adj_set = set(shape_adj)
-color_adj = ["brown", "black", "blue", "gray", "green", \
-             "pink", "purple", "red", "white", "yellow",  "orange"], #orange confuses image generators to generate an orange fruit
+color_adj = ["brown", "black", "blue", "gray", "green", "pink", "purple", "red", "white", "yellow",  "orange"] #orange confuses image generators to generate an orange fruit
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
