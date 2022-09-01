@@ -564,7 +564,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                        if items[-1][0] in distractors:
                            distractor_is_best_match = True
                 if not matched_output or  distractor_is_best_match or matched_output['score'] < score_cutoff or \
-                      (matched_output['decomposed2text'] and any(a for a in matched_output['decomposed2text'].values() if a[1] < score_cutoff)):
+                      (matched_output['decomposed2text'] and not any(a for a in matched_output['decomposed2text'].values() if a[1] >= score_cutoff)):
                     #this is an undrawable sentence
                     matched_output = {}
                     matched_output['matched_sentence'] = matched_sentence
@@ -665,7 +665,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               distractor_is_best_match = True
                               print ('distractor 2', items)
                       if matched_output2 and not distractor_is_best_match and \
-                          (not matched_output2['decomposed2text'] or any(a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff))) and \
+                          matched_output2['decomposed2text'] and \
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                         
