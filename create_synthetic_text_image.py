@@ -659,7 +659,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                              any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff)): 
                             mood_type = image_type = ""                            
                         if prefix:
-                          distractors = set(distractors + [prefix])
+                          distractors = set(list(distractors) + [prefix])
                         matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
                         matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
