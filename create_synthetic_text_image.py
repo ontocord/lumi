@@ -151,10 +151,10 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       if religion: qa_list.append((the_person, f"what religion is {the_person}? || {religion[0]}"))
       race = [a for a in aug_word.split() if a in race_lst_set]
       if race: qa_list.append((the_person, f"what race is {the_person}? || {race[0]}"))
-      sexual_orientation = [a for a in aug_word.split() if a in sexual_orientation_lst_set]
-      if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}? || {sexual_orientation[0]}"))
-      political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
-      if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}? || {political_affiliation[0]}"))
+      #sexual_orientation = [a for a in aug_word.split() if a in sexual_orientation_lst_set]
+      #if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}? || {sexual_orientation[0]}"))
+      #political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
+      #if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}? || {political_affiliation[0]}"))
       if "person" not in the_person:
         qa_list.append((the_person, f"what gender is the person? || {the_person}"))
         
