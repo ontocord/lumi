@@ -651,7 +651,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         if prefix:
                           if not ((matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.25)) or \
                              (matched_output2['cropped2text'] and any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.25))): 
-                            mood_type = image_type = ""                            
+                            mood_type = image_type = None                           
                         if prefix:
                           distractors = set(list(distractors) + [prefix])
                         if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
@@ -662,7 +662,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         if random.random() <= prob_add_qa_image_type:
                           if image_type== "": 
                             image_type = "photo"
-                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]
+                          if image_type is not None:
+                            matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['score2'] = matched_output2['score']
