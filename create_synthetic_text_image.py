@@ -633,15 +633,17 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print (prefix)
                       if prefix:
                         generated_sentence = prefix + " " + generated_sentence  
-                        
+                      generated_sentence = generated_sentence.replace("  ", " ")  
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      prefix = prefix.replace(' of:', '')
+                      
                       # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                       generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
+                      generated_sentence = generated_sentence.replace(prefix, '').replace("  ", " ").strip()
+                      prefix = prefix.replace(' of:', '')
                       distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['a clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                       matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, other_sent_arr=distractors+([prefix] if prefix else []), \
                                                                         entities=[] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
@@ -691,7 +693,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               ci = cropped_images[idx]
                               print (vals)
                               if in_notebook: display(PIL.Image.fromarray(ci))
-                            print ('generated:', matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
+                            print ('generated -', prefix, ':',  matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             if in_notebook: display(img)  
                     else:
                       pass
