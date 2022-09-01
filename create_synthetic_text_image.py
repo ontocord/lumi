@@ -304,7 +304,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| below")] 
             prev_small_element = None
             continue            
-        if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25):
+        if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
           if  background_element:
             if random.randint(0,1) == 0:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?|| behind")] 
@@ -321,7 +321,7 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
           elif coord[1] > 75:
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
-          prev_small_element = (element, score, coord)
+          if coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
           continue  
           
   # add some pre-created qa's
@@ -366,15 +366,10 @@ def create_qa_vlt5(matched_output, img, score_cutoff, aug2ent, max_qa=3, potenti
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what color is {element}?|| {answer}")] 
             entity_to_qa +=1
-      if random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
+      elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("standing", "sitting", "nothing", "nowhere", "unknown", "black", "white")): 
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} doing?|| {answer}")] 
-            entity_to_qa +=1
-      elif random.randint(0,1) == 0:
-        answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
-        if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is {element} for?|| {answer}")] 
             entity_to_qa +=1
       elif random.randint(0,1) == 0 and prev_element:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
