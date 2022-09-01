@@ -571,8 +571,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
                     decomposed2text = matched_output['decomposed2text']
-                    matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
-                    matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
+                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
+                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
                     #clip score of vlt5 caption against the image
                     create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
                          
@@ -660,8 +660,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             mood_type = image_type = ""                            
                         if prefix:
                           distractors = set(list(distractors) + [prefix])
-                        matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
-                        matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
+                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
+                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
                         create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
                         if mood_type:
                           matched_output2['qa'] = matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]
