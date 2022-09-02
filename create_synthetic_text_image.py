@@ -262,9 +262,10 @@ def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images
       clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_crop=verbs+other_sent_arr)  
 
     if clip_output is not None:
-      most_similar_idx = clip_output['scores'].sort().indices[-1]
-      sim1 = clip_output['scores'][most_similar_idx].item()
-      matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'cropped2text': clip_output['cropped2text'], \
+      #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
+      #most_similar_idx = clip_output['scores'].sort().indices[-1]
+      #sim1 = clip_output['scores'][most_similar_idx].item()
+      matched_output = {'matched_sentence': matched_sentence, 'cropped2text': clip_output['cropped2text'], \
                               'cropped_image_features': None if clip_output['cropped_image_features'] is None else clip_output['cropped_image_features'].cpu().numpy().tostring(),  \
                               'decomposed2text': clip_output['decomposed2text'], \
                               'decomposed_image_features': None if clip_output['decomposed_image_features'] is None else  clip_output['decomposed_image_features'].cpu().numpy().tostring(),\
@@ -633,6 +634,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     out.write(str(matched_output)+"\n")
                     continue
                 else:
+                    matched_output['score'] = sim1
                     matched_output['tokens'] = tokens.tostring()
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
@@ -658,14 +660,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     new_words = [a[0] for a in  matched_output['decomposed2text'].values() if a[1] >= score_cutoff and a[0] in matched_sentence] 
                     word_str = ", ".join(new_words)
                     if word_str:
-                      
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                     min_length=len(word_str.split())*3, 
                                                                     max_length=len(word_str.split())*10, 
-                                                                    no_repeat_ngram_size=2, 
-                                                                    do_sample=True,
-                                                                    top_p=0.95,
-                                                                    top_k=10, )
+                                                                    no_repeat_ngram_size=2)
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
@@ -698,76 +696,83 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         prefix = image_type +" of:"
                       elif mood_type and image_type:
                         prefix = mood_type + " " + image_type +" of:"
-                      print (prefix)
-                      if prefix:
-                        generated_sentence = prefix + " " + generated_sentence  
-                      generated_sentence = generated_sentence.replace("  ", " ").strip()  
                       #generate an image 
-                      tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
+                      tokens, img = minidalle.generate(prefix + " " + generated_sentence  if prefix else generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
                       tokens = tokens.cpu().numpy()
                       tokens.dtype = np.int16
-                      
-                      # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
-                      generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
-                      if prefix:
-                        generated_sentence = generated_sentence.replace(prefix, '').replace("  ", " ").strip()
-                        prefix = prefix.replace(' of:', '')
-                      distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
-                      potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
-                      implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
-                      implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
-                      print ('implied entities', implied_entities)
-                      potential_qa_list = potential_qa_list + qa_list_gen
-                      matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, 
-                                                                        other_sent_arr=distractors + \
-                                                                        ([prefix] if prefix else []) +  \
-                                                                        implied_entities + \
-                                                                        new_words)
-                      distractors = set(distractors)
-                      distractor_is_best_match = False
-                      if matched_output2 and matched_output2['decomposed2text'] and matched_output2['cropped2text']:
-                          items = list(matched_output2['decomposed2text'].values())
-                          items.sort(key=lambda a: a[1])
-                          if items[-1][0] in distractors:
-                            distractor_is_best_match = True
-                            print ('distractor 1', items)
-                      if matched_output2 and not distractor_is_best_match and \
-                          matched_output2['decomposed2text'] and \
-                          matched_output2['score'] >= mult*score_cutoff and \
-                          len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
-                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and b[0] != prefix and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and b[0] != prefix and  not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                        create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
+                      if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
+                        sim2 = clip_output['scores'][0].item()
+                        # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
+                        generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
+                        distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
+                        potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
+                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] + [a[0] for a in potential_qa_list] 
+                        implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
                         if prefix:
-                          if not (matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*high_score_mult)): 
-                            prefix = mood_type = image_type = None
-                        if mood_type:
-                          matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
-                        if random.random() <= prob_add_qa_image_type:
-                          if image_type== "": 
-                            image_type = "photo"
-                          if image_type is not None:
-                            matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
-                        matched_output['tokens2'] = tokens.tostring()
-                        matched_output['thumbnail2'] = np.array(img).tostring()
-                        matched_output['score2'] = matched_output2['score']
-                        matched_output['decomposed2text2'] = matched_output2['decomposed2text']
-                        matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
-                        matched_output['cropped2text2'] = matched_output2['cropped2text']
-                        matched_output['cropped_image_features2'] = matched_output2['cropped_image_features']
-                        matched_output['image_features2'] = matched_output2['image_features']
-                        matched_output['matched_sentence2'] = matched_output2['matched_sentence']
-                        matched_output['qa2'] = list(set(matched_output2.get('qa',[])))
-                        if verbose:
-                          cropped2text = matched_output2['cropped2text']
-                          if cropped2text:
-                            for idx, vals in cropped2text.items():
-                              ci = cropped_images[idx]
-                              print (vals)
-                              if in_notebook: display(PIL.Image.fromarray(ci))
-                            print ('generated -', prefix, ':',  matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
-                            if in_notebook: display(img)  
+                          prefix = prefix.replace(' of:', '')
+                          prefix = prefix.split()
+                          prefix_arr = []
+                          for pi in range(len(prefix)):
+                            pr = " ".join(prefix[-pi+1:])
+                            if pr not in generated_sentence:
+                              implied_entities.append(prefix)
+                              prefix_arr.append(pr)
+                        for word in new_words:
+                          if word not in generated_sentence:
+                            implied_entities.append(word)
+                        implied_entities = list(set(implied_entities)) 
+                        print ('implied entities', implied_entities)
+                        potential_qa_list = potential_qa_list + qa_list_gen
+                        matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, 
+                                                                          other_sent_arr=distractors + \
+                                                                          implied_entities)
+                        distractors = set(distractors)
+                        distractor_is_best_match = False
+                        if matched_output2 and matched_output2['decomposed2text'] and matched_output2['cropped2text']:
+                            items = list(matched_output2['decomposed2text'].values())
+                            items.sort(key=lambda a: a[1])
+                            if items[-1][0] in distractors:
+                              distractor_is_best_match = True
+                              print ('distractor 1', items)
+                        if matched_output2 and not distractor_is_best_match and \
+                            matched_output2['decomposed2text'] and \
+                            matched_output2['score'] >= mult*score_cutoff and \
+                            len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
+                          if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                          if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                          create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                          if prefix_array:
+                            if not (matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] in prefx_array)): 
+                              prefix = mood_type = image_type = None
+                          if mood_type:
+                            matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
+                          if random.random() <= prob_add_qa_image_type:
+                            if image_type== "": 
+                              image_type = "photo"
+                            if image_type is not None:
+                              matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
+                          matched_output['tokens2'] = tokens.tostring()
+                          matched_output['thumbnail2'] = np.array(img).tostring()
+                          matched_output['score2'] = sim2
+                          #matched_output['text2image_scores2'] = matched_output2['text2image_scores']
+                          matched_output['decomposed2text2'] = matched_output2['decomposed2text']
+                          matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
+                          matched_output['cropped2text2'] = matched_output2['cropped2text']
+                          matched_output['cropped_image_features2'] = matched_output2['cropped_image_features']
+                          matched_output['image_features2'] = matched_output2['image_features']
+                          matched_output['matched_sentence2'] = matched_output2['matched_sentence']
+                          matched_output['qa2'] = list(set(matched_output2.get('qa',[])))
+                          if verbose:
+                            cropped2text = matched_output2['cropped2text']
+                            if cropped2text:
+                              for idx, vals in cropped2text.items():
+                                ci = cropped_images[idx]
+                                print (vals)
+                                if in_notebook: display(PIL.Image.fromarray(ci))
+                              print ('generated:', matched_output2['score'], '***'. prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
+                              if in_notebook: display(img)  
                     dat_cnt += 1
                     out.write(str(matched_output)+"\n")
                     
