@@ -7,7 +7,7 @@ try:
                                            os.path.pardir)))
 except:
   sys.path.append(os.path.abspath(os.path.join("./",
-                                           os.path.pardir)))
+                                           os.path.pardir))
 
 from lumi.stopwords  import stopwords
 from lumi.gush_idx import *
@@ -238,12 +238,13 @@ def strip_left_stopwords(e_text):
         e_text2.append(et)
   return " ".join(e_text2)
 
-def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=20):
+def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=5):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+  verbs = [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set]                            
   ner_and_verbs = dict([(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc.ents if len(e.text) > 4] + \
-                           [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
+                           verbs + \
                            [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
   text4 = list(set([a.strip("()[]0123456789-:,.+? ") for a in (list(ner_and_verbs.values()) + other_sent_arr) if a.strip()]))
   text4 = [a for a in text4 if a.strip()]
@@ -258,9 +259,9 @@ def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images
     if get_cropped_images:
       normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
       #score the entities and verbs against the image
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_crop=verbs+other_sent_arr)  
     else:
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_crop=verbs+other_sent_arr)  
 
     if clip_output is not None:
       #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
