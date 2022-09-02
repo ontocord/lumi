@@ -368,7 +368,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
         prev_element = element
     return list(set(potential_qa_list))
                     
-def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_score_mult=1.25):
+def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_score_mult=1.2):
   global vlt5, vlt5_tokenizer
   l = matched_output['matched_sentence']
   ent2score = {}
@@ -430,7 +430,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
-    if entity in l or ent2score.get(entity,0) >= score_cutoff*high_score_mult:
+    if entity in l or ent2score.get(entity,0) >= score_cutoff:
       answer = question.split("||")[-1].strip()
       if answer in l or ent2score.get(answer,1) >= score_cutoff*high_score_mult:
           print ('implied answer score', answer, ent2score.get(answer,1))
@@ -438,7 +438,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
         entity1, entity2 = entity1.strip(), entity2.strip()
-        if (entity in l or ent2score.get(entity1,0) >= score_cutoff*high_score_mult) and (entity in l or ent2score.get(entity2,0) >= score_cutoff*high_score_mult):
+        if (entity1 in l or ent2score.get(entity1,0) >= score_cutoff) and (entity2 in l or ent2score.get(entity2,0) >= score_cutoff):
           answer = question.split("||")[-1].strip()
           if answer in l or ent2score.get(answer,1) >= score_cutoff*high_score_mult:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
@@ -449,7 +449,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
       
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.25):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -782,7 +782,7 @@ if __name__ == "__main__":
     parser.add_argument('-trimmed_text_word_len', dest='trimmed_text_word_len', type=int, help='The approximate number of words per sentence used to generate images', default=50)
     parser.add_argument('-pytorch_device', dest='pytorch_device', type=str, help='the device', default= "cuda")
     parser.add_argument('-verbose', dest='verbose', type=int, help='verbse mode', default= 0)
-    parser.add_argument('-high_score_mult', dest='high_score_mult', type=float, help='multiple of score_cutff for implied data', default= 1.25)
+    parser.add_argument('-high_score_mult', dest='high_score_mult', type=float, help='multiple of score_cutff for implied data', default= 1.2)
     args = parser.parse_args()
     create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
                                      input_en_txt_gz_file=args.input_en_txt_gz_file, \
