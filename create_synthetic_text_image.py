@@ -786,7 +786,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                 ci = cropped_images[idx]
                                 print (vals)
                                 if in_notebook: display(PIL.Image.fromarray(ci))
-                              print ('generated:', matched_output2['score'], '***'. prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
+                              print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                               if in_notebook: display(img)  
                     dat_cnt += 1
                     out.write(str(matched_output)+"\n")
