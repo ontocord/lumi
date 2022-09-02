@@ -297,59 +297,81 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
     if person:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-          potential_qa_list.append((person, f"what is {person} feeling?|| {answer}"))
+          potential_qa_list.append((person, f"what is {person} feeling?||{answer}"))
     entity_to_qa = 0    
     elements = list(aug2ent.values())
     elements.sort(key=lambda a: a[0], reverse=True)
+    description = ""
+    answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
+    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+      description = answer
+      potential_qa_list.append((answer, f"what is in this picture?||{answer}"))
+      elements = [description] + elements
     answer2qa = {}
     for element in elements:
-        if element not in l: continue
+        if element != description and element not in l: continue
         if entity_to_qa >= max_qa: break
         color = [a for a in element.split() if a in color_adj_set]
         shape = [a for a in element.split() if a in shape_adj_set]
-        if shape and random.randint(0,3) == 0: 
-          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
+        if element == description:
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append((element, f"what shape is {element}?|| {answer}"))
+              potential_qa_list.append((element, f"where is {element}?||{answer}"))
               entity_to_qa +=1
-        elif color and random.randint(0,3) == 0: 
-          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
-          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append((element, f"what color is {element}?|| {answer}"))
-              entity_to_qa +=1
-        elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append((element, f"what is {element} doing?|| {answer}"))
+              potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
               entity_to_qa +=1
               if answer.endswith("ing"):
                 act = answer
                 prep = random.choice(['with','from','to','at','in'])
                 answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                 if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-                    potential_qa_list.append((element, f"what is {element} {act} {prep}?|| {answer}"))
+                    potential_qa_list.append((element, f"what is {element} {act} {prep}?||{answer}"))
+                    entity_to_qa +=1
+        elif shape and random.randint(0,3) == 0: 
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              potential_qa_list.append((element, f"what shape is {element}?||{answer}"))
+              entity_to_qa +=1
+        elif color and random.randint(0,3) == 0: 
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              potential_qa_list.append((element, f"what color is {element}?||{answer}"))
+              entity_to_qa +=1
+        elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
+          answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
+          if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+              potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
+              entity_to_qa +=1
+              if answer.endswith("ing"):
+                act = answer
+                prep = random.choice(['with','from','to','at','in'])
+                answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
+                if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
+                    potential_qa_list.append((element, f"what is {element} {act} {prep}?||{answer}"))
                     entity_to_qa +=1
         elif random.randint(0,1) == 0:
           if  element.endswith("ing"):
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-                potential_qa_list.append((element, f"what is {element}?|| {answer}"))
+                potential_qa_list.append((element, f"what is {element}?||{answer}"))
                 entity_to_qa +=1
           else:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-                potential_qa_list.append((element, f"what is {element} for?|| {answer}"))
+                potential_qa_list.append((element, f"what is {element} for?||{answer}"))
                 entity_to_qa +=1
         elif random.randint(0,1) == 0 and prev_element:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append(element+' and '+ prev_element, f"where is {element} and {prev_element}?|| {answer}"))
+              potential_qa_list.append(element+' and '+ prev_element, f"where is {element} and {prev_element}?||{answer}"))
               entity_to_qa +=1
         elif random.randint(0,1) == 0 and not any(a for a in matched_output.get('qa',[]) if f"where is {element}?" not in a[1]):
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append((element, f"where is {element}?|| {answer}"))
-              entity_to_qa +=1
+              potential_qa_list.append((element, f"where is {element}?||{answer}"))
+              entity_to_qa +=1            
         prev_element = element
   return potential_qa_list
                     
@@ -414,9 +436,18 @@ def create_qa(matched_output, img, score_cutoff, aug2ent, potential_qa_list=[]):
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
-    if entity in l and ent2score.get(entity,0) > score_cutoff:
-      matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
-     
+    if entity in l and ent2score.get(entity,0) >= score_cutoff:
+      answer = question.split("||")[-1].strip()
+      if ent2score.get(answer,1) >= score_cutoff:
+          matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
+    elif ":" in entity: 
+        entity = entity.split(":")[-1].strip()
+        if entity in l and ent2score.get(entity,0) >= score_cutoff:
+          answer = question.split("||")[-1].strip()
+          if ent2score.get(answer,1) >= score_cutoff:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
+        
+      
 
 def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
@@ -572,10 +603,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 matched_sentence = simplify_aug(matched_sentence, aug2ent)
                 # now find the entities and important verbs in the most similar sentence. 
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['a clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
-                potential_qa_list = copy.copy(qa_list)
-                potential_qa_list = create_qa_from_vlt5(matched_sentence, img,  aug2ent, potential_qa_list=potential_qa_list)
+                potential_qa_list = create_qa_from_vlt5(matched_sentence, img,  aug2ent)
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
                 implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in  ("nothing", "nowhere", "unknown", "black", "white")]
+                potential_qa_list = potential_qa_list + qa_list
                 matched_output, cropped_images = get_sent_to_img(matched_sentence, img, get_cropped_images=True, other_sent_arr=distractors + implied_entities)
                 distractors= set(distractors)
                 distractor_is_best_match = False
@@ -603,7 +634,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     decomposed2text = matched_output['decomposed2text']
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
-                    create_qa_vlt5(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=qa_list)
+                    create_qa(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=potential_qa_list)
                          
                     if verbose:
                       cropped2text = matched_output['cropped2text']
@@ -671,8 +702,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = generated_sentence.replace(prefix, '').replace("  ", " ").strip()
                       prefix = prefix.replace(' of:', '')
                       distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['a clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
-                      matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, other_sent_arr=distractors+([prefix] if prefix else []), \
-                                                                        entities=[] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
+                      potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
+                      implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
+                      implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in  ("nothing", "nowhere", "unknown", "black", "white")]
+                      potential_qa_list = potential_qa_list + qa_list_gen
+                      matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, 
+                                                                        other_sent_arr=distractors + \
+                                                                        ([prefix] if prefix else []) +  \
+                                                                        implied_entities + \
+                                                                        [] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
                       distractors = set(distractors)
                       distractor_is_best_match = False
                       if matched_output2 and matched_output2['decomposed2text'] and matched_output2['cropped2text']:
@@ -685,7 +723,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output2['decomposed2text'] and \
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
-                        
                         if prefix:
                           if not ((matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15)) or \
                              (matched_output2['cropped2text'] and any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15))): 
@@ -694,7 +731,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           distractors = set(list(distractors) + [prefix])
                         if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
                         if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
-                        create_qa_vlt5(matched_output2, img, score_cutoff,  aug2ent_gen, potential_qa_list=qa_list_gen)
+                        create_qa(matched_output2, img, score_cutoff,  aug2ent_gen, potential_qa_list=potential_qa_list)
                         if mood_type:
                           matched_output2['qa'] = matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]
                         if random.random() <= prob_add_qa_image_type:
