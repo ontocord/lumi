@@ -383,7 +383,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
         ent2score[element] = max(ent2score.get(element, 0), score)
     cropped2text = matched_output.get('cropped2text', {})
     if cropped2text:
-      for element, score in cropped2text.values():
+      for element, score, coord in cropped2text.values():
         ent2score[element] = max(ent2score.get(element, 0), score)
 
     # create some qa from coordinates of elements     
