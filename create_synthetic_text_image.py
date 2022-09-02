@@ -172,7 +172,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
   ents = [(e.text, e.label_) for e in doc.ents]
   #TODO, use nltk.wordnet to see if the parent node is an obj vs. abstract.
   if do_obj: 
-    ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
+    ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and len(e.text) < 8 and e.text.lower() not in stopwords_set] 
     
   for e_text, e_label in list(set(ents)):
     e_text = e_text.strip("()[]0123456789-:,.+? ")
