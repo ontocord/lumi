@@ -652,8 +652,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if in_notebook: display(img)
                     dat_cnt += 1    
                     
-                    #now let's create a different sentence based on the elements of the previous sentence, using words have higher visual scores
-                    word_str = ", ".join([a[0] for a in decomposed2text.values() if a[1] >= score_cutoff and a[0] not in distractors]) #  and a[0] not in implied_entities
+                    #now let's create a different sentence based on the elements of the previous sentence (including implied entities), using words have higher visual scores
+                    new_words = [a[0] for a in decomposed2text.values() if a[1] >= score_cutoff] 
+                    word_str = ", ".join(new_words)
                     if word_str:
                       
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
@@ -719,7 +720,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                                                         other_sent_arr=distractors + \
                                                                         ([prefix] if prefix else []) +  \
                                                                         implied_entities + \
-                                                                        [] if not  matched_output['decomposed2text'] else [a[0] for a in matched_output['decomposed2text'].values() if a[0] in generated_sentence])
+                                                                        new_words)
                       distractors = set(distractors)
                       distractor_is_best_match = False
                       if matched_output2 and matched_output2['decomposed2text'] and matched_output2['cropped2text']:
