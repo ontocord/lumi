@@ -112,7 +112,7 @@ def load_json_like_from_str(s, **kwargs):
              ret[key] = Image.fromarray(ret[key])
       return ret
 
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_crop=None):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, crop_add_factor=.55, decompose_image=False, normalized_boxes=None, ignore_from_crop=None):
   if ignore_from_crop is None: ignore_from_crop = {}
   p = next(clip_model.parameters())
   decomposed_image_features = None 
@@ -168,7 +168,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     for cidx, tfeat in enumerate(text_features):
       if text_array[cidx] in ignore_from_crop: continue
       text_array2.append(text_array[cidx])
-      scores2 =  min (1.0, (scores[cidx] + add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
+      scores2 =  min (1.0, (scores[cidx] + crop_add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
       cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[0])))
       cropped_scores.append(cropped_scores_topk[-1].values[0])
     if not cropped_scores:
