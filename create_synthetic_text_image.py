@@ -376,6 +376,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                     
 def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
+  l = matched_output['matched_sentence']
   ent2score = {}
   if True:
     decomposed2text = matched_output.get('decomposed2text', {})
