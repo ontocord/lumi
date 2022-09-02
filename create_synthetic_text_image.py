@@ -153,20 +153,20 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       the_person =  " ".join(aug_word.split()[-2:])
       if the_person not in person_lst_set: the_person = "person"
       emotion = [a for a in aug_word.split() if a in emotion_adj_set]
-      if emotion: qa_list.append((the_person, f"what is {the_person} feeling? || {emotion[0]}"))
+      if emotion: qa_list.append((the_person, f"what is {the_person} feeling?||{emotion[0]}"))
       age = [a for a in aug_word.split() if a in age_adj_set]
-      if age: qa_list.append((the_person, f"how old is {the_person}? || {age[0]}"))
+      if age: qa_list.append((the_person, f"how old is {the_person}?||{age[0]}"))
       the_person = the_person.split()[-1]
       religion = [a for a in aug_word.split() if a in religion_lst_set]
-      if religion: qa_list.append((the_person, f"what religion is {the_person}? || {religion[0]}"))
+      if religion: qa_list.append((the_person, f"what religion is {the_person}?||{religion[0]}"))
       race = [a for a in aug_word.split() if a in race_lst_set]
-      if race: qa_list.append((the_person, f"what race is {the_person}? || {race[0]}"))
+      if race: qa_list.append((the_person, f"what race is {the_person}?||{race[0]}"))
       sexual_orientation = [a for a in aug_word.split() if a in sexual_orientation_lst_set]
-      if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}? || {sexual_orientation[0]}"))
+      if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}?||{sexual_orientation[0]}"))
       political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
-      if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}? || {political_affiliation[0]}"))
+      if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}?||{political_affiliation[0]}"))
       if "person" not in the_person:
-        qa_list.append((the_person, f"what gender is the person? || {the_person}"))
+        qa_list.append((the_person, f"what gender is the person?||{the_person}"))
         
   qa_list = []
   aug2ent =  {}
@@ -188,9 +188,9 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         aug_word =   aug_loc(e_text)
         thing = " ".join(aug_word.split()[-2:])
         color = [a for a in aug_word.split() if a in color_adj_set]
-        if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
+        if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
         shape = [a for a in aug_word.split() if a in shape_adj_set]
-        if shape: qa_list.append((thing, f"what shape is {thing}? || {shape[0]}"))
+        if shape: qa_list.append((thing, f"what shape is {thing}?||{shape[0]}"))
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
         get_person_questions(aug_word, qa_list)        
@@ -198,7 +198,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         aug_word =  aug_obj(e_text)
         thing =  " ".join(aug_word.split()[1:])
         color = [a for a in aug_word.split() if a in color_adj_set]
-        if color: qa_list.append((thing, f"what color is {thing}? || {color[0]}"))
+        if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
     else:
         aug_word = e_text
     l = l.replace(e_text, aug_word,1)
@@ -349,7 +349,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                 answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                 if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
                     potential_qa_list.append((element, f"what is {element} {act} {prep}?||{answer}"))
-                    entity_to_qa +=1
+                    entity_to_qa +=1[
         elif random.randint(0,1) == 0:
           if  element.endswith("ing"):
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
@@ -372,7 +372,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
               potential_qa_list.append((element, f"where is {element}?||{answer}"))
               entity_to_qa +=1            
         prev_element = element
-    return potential_qa_list
+    return list(set(potential_qa_list))
                     
 def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
@@ -479,8 +479,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         if not (stopword_ratio < 0.75 and random.random() < stopword_ratio and random.random() < shortword_ratio):
           continue
         qa = ""
-        if "? ||" in l:
-          l, answer = l.split("? ||",1)
+        if "?||" in l:
+          l, answer = l.split("?||",1)
           l_arr = l.split(".")
           l = ".".join(l_arr[:-1])
           qa = (l_arr[-1]+"?|| "+answer).strip()
@@ -627,6 +627,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     matched_output['prev_text'] = prev_text
                     if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
+                    matched_output['qa'] = list(set(matched_output.get('qa')))
                     out.write(str(matched_output)+"\n")
                     continue
                 else:
@@ -634,7 +635,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
-                    if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
+                    if qa: matched_output['qa'] = list(set(matched_output.get('qa',[]) + [qa]))
+                    matched_output['qa'] = list(set(matched_output.get('qa')))
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
                     create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
@@ -745,12 +747,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
                         if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
                         if mood_type:
-                          matched_output2['qa'] = matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]
+                          matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
                         if random.random() <= prob_add_qa_image_type:
                           if image_type== "": 
                             image_type = "photo"
                           if image_type is not None:
-                            matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]
+                            matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
                         matched_output['tokens2'] = tokens.tostring()
                         matched_output['thumbnail2'] = np.array(img).tostring()
                         matched_output['score2'] = matched_output2['score']
@@ -760,7 +762,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['cropped_image_features2'] = matched_output2['cropped_image_features']
                         matched_output['image_features2'] = matched_output2['image_features']
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
-                        matched_output['qa2'] = matched_output2.get('qa')
+                        matched_output['qa2'] = list(set(matched_output2.get('qa')))
                         if verbose:
                           cropped2text = matched_output2['cropped2text']
                           if cropped2text:
