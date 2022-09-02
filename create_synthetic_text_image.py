@@ -653,7 +653,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     dat_cnt += 1    
                     
                     #now let's create a different sentence based on the elements of the previous sentence, using words that have higher visual scores
-                    new_words = [a[0] for a in  matched_output['decomposed2text'].values() if a[1] >= score_cutoff and word[0] in matched_sentence] 
+                    new_words = [a[0] for a in  matched_output['decomposed2text'].values() if a[1] >= score_cutoff and a[0] in matched_sentence] 
                     word_str = ", ".join(new_words)
                     if word_str:
                       
