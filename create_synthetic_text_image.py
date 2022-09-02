@@ -161,10 +161,6 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       if religion: qa_list.append((the_person, f"what religion is {the_person}?||{religion[0]}"))
       race = [a for a in aug_word.split() if a in race_lst_set]
       if race: qa_list.append((the_person, f"what race is {the_person}?||{race[0]}"))
-      sexual_orientation = [a for a in aug_word.split() if a in sexual_orientation_lst_set]
-      if sexual_orientation: qa_list.append((the_person, f"what sexual orientation is {the_person}?||{sexual_orientation[0]}"))
-      political_affiliation = [a for a in aug_word.split() if a in political_affiliation_lst_set]
-      if political_affiliation: qa_list.append((the_person, f"what political affiliation is {the_person}?||{political_affiliation[0]}"))
       if "person" not in the_person:
         qa_list.append((the_person, f"what gender is the person?||{the_person}"))
         
@@ -173,6 +169,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
   seen = {}
   doc = spacy_nlp(l)
   ents = [(e.text, e.label_) for e in doc.ents]
+  #TODO, use nltk.wordnet to see if the parent node is an obj vs. abstract.
   if do_obj: 
     ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set] 
     
@@ -264,9 +261,6 @@ def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images
       clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_crop=verbs+other_sent_arr)  
 
     if clip_output is not None:
-      #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
-      #image is shape = [100,100,3], dtype="uint8"
-      #tokens is [1, 1028] int16
       most_similar_idx = clip_output['scores'].sort().indices[-1]
       sim1 = clip_output['scores'][most_similar_idx].item()
       matched_output = {'score': sim1, 'matched_sentence': matched_sentence, 'cropped2text': clip_output['cropped2text'], \
@@ -374,7 +368,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
         prev_element = element
     return list(set(potential_qa_list))
                     
-def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
+def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_score_mult=1.25):
   global vlt5, vlt5_tokenizer
   l = matched_output['matched_sentence']
   ent2score = {}
@@ -436,22 +430,26 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
-    if entity in l or ent2score.get(entity,0)*.8 >= score_cutoff:
+    if entity in l or ent2score.get(entity,0) >= score_cutoff*high_score_mult:
       answer = question.split("||")[-1].strip()
-      if answer in l or ent2score.get(answer,1)*.8 >= score_cutoff:
+      if answer in l or ent2score.get(answer,1) >= score_cutoff*high_score_mult:
           print ('implied answer score', answer, ent2score.get(answer,1))
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
         entity1, entity2 = entity1.strip(), entity2.strip()
-        if (entity in l or ent2score.get(entity1,0) >= score_cutoff)*.8 and (entity in l or ent2score.get(entity2,0)*.8 >= score_cutoff):
+        if (entity in l or ent2score.get(entity1,0) >= score_cutoff*high_score_mult) and (entity in l or ent2score.get(entity2,0) >= score_cutoff*high_score_mult):
           answer = question.split("||")[-1].strip()
-          if answer in l or ent2score.get(answer,1)*.8 >= score_cutoff:
+          if answer in l or ent2score.get(answer,1) >= score_cutoff*high_score_mult:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
         
       
-
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda'):
+#saves away a json of from {'matched_sentence': <str>, 'score': <float>, ...
+#decomposed_image_features is shape=[1, 50, 512] dtype="float16"
+#image is shape = [100,100,3], dtype="uint8"
+#tokens is [1, 1028] int16
+      
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.25):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -464,8 +462,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         if "You are visiting the placeholder page" in l: continue
         l_lower = l.lower()
         if l_lower.count("free") + l_lower.count("dating") + l_lower.count("sex") + l_lower.count("fuck") + l_lower.count("cock") + l_lower.count("pussy") + l_lower.count("xxx") > 3: continue  
-        
-        if l_lower.count("free") +  l_lower.count("viagra") +   l_lower.count("cialis") > 3: continue 
+        if l_lower.count("free") +  l_lower.count("viagra") + l_lower.count("cialis") > 3: continue 
         l = l.replace("because this is pdf file * PDF *", " ... ")
         l = l.replace("no short description", " ... ")
         l = l.replace("Field of the Invention", "") 
@@ -640,9 +637,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['qa'] = list(set(matched_output.get('qa',[])))
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
-                    create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
-                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
-                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
+                    create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*1.2)])
                          
                     if verbose:
                       cropped2text = matched_output['cropped2text']
@@ -687,7 +684,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         qa_list_gen = qa_list_gen + qa_list
                       else:
                         #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
-                        mult = 1.25
+                        mult = high_score_mult
                         prob_add_qa_image_type = 1.0
                         qa_list_gen = qa_list
                         aug2ent_gen = aug2ent
@@ -702,7 +699,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       print (prefix)
                       if prefix:
                         generated_sentence = prefix + " " + generated_sentence  
-                      generated_sentence = generated_sentence.replace("  ", " ")  
+                      generated_sentence = generated_sentence.replace("  ", " ").strip()  
                       #generate an image 
                       tokens, img = minidalle.generate(generated_sentence, image_output=True, token_output=True)
                       img = img.resize((100,100))
@@ -711,8 +708,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       
                       # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                       generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
-                      generated_sentence = generated_sentence.replace(prefix, '').replace("  ", " ").strip()
-                      prefix = prefix.replace(' of:', '')
+                      if prefix:
+                        generated_sentence = generated_sentence.replace(prefix, '').replace("  ", " ").strip()
+                        prefix = prefix.replace(' of:', '')
                       distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                       potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
                       implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
@@ -736,17 +734,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output2['decomposed2text'] and \
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
+                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and b[0] != prefix])
+                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and b[0] != prefix])
+                        create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                         if prefix:
-                          if not ((matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15)) or \
-                             (matched_output2['cropped2text'] and any(a for a in matched_output2['cropped2text'].values() if a[0] == prefix and a[1] >= score_cutoff*1.15))): 
-                            mood_type = image_type = None                           
-                        if prefix:
-                          distractors = set(list(distractors) + [prefix])
-                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors])
-                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors])
-                        create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
-                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
-                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
+                          if not (matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*high_score_mult)): 
+                            prefix = mood_type = image_type = None
                         if mood_type:
                           matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
                         if random.random() <= prob_add_qa_image_type:
@@ -773,9 +768,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               if in_notebook: display(PIL.Image.fromarray(ci))
                             print ('generated -', prefix, ':',  matched_output2['score'], '**', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2text'], '***', matched_output2.get('qa'))
                             if in_notebook: display(img)  
-                    else:
-                      pass
-                    
                     dat_cnt += 1
                     out.write(str(matched_output)+"\n")
                     
@@ -789,7 +781,8 @@ if __name__ == "__main__":
     parser.add_argument('-score_cutoff', dest='score_cutoff', type=float, help='Cutoff score for image/text matching using CLIP. Usually around .23-.20', default=.2)
     parser.add_argument('-trimmed_text_word_len', dest='trimmed_text_word_len', type=int, help='The approximate number of words per sentence used to generate images', default=50)
     parser.add_argument('-pytorch_device', dest='pytorch_device', type=str, help='the device', default= "cuda")
-    
+    parser.add_argument('-verbose', dest='verbose', type=int, help='verbse mode', default= 0)
+    parser.add_argument('-high_score_mult', dest='high_score_mult', type=float, help='multiple of score_cutff for implied data', default= 1.25)
     args = parser.parse_args()
     create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
                                      input_en_txt_gz_file=args.input_en_txt_gz_file, \
@@ -797,6 +790,6 @@ if __name__ == "__main__":
                                      score_cutoff=args.score_cutoff, \
                                      max_img_per_doc=args.max_img_per_doc, \
                                      trimmed_text_word_len=args.trimmed_text_word_len, \
-                                     verbose=False, \
+                                     verbose=args.verbose, high_score_mult=args.high_score_mult, \
                                      pytorch_device=args.pytorch_device)
  
