@@ -7,7 +7,7 @@ try:
                                            os.path.pardir)))
 except:
   sys.path.append(os.path.abspath(os.path.join("./",
-                                           os.path.pardir))
+                                           os.path.pardir)))
 
 from lumi.stopwords  import stopwords
 from lumi.gush_idx import *
