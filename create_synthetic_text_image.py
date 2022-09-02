@@ -371,7 +371,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
               potential_qa_list.append((element, f"where is {element}?||{answer}"))
               entity_to_qa +=1            
         prev_element = element
-  return potential_qa_list
+    return potential_qa_list
                     
 def create_qa(matched_output, img, score_cutoff, aug2ent, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
