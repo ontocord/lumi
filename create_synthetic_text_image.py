@@ -320,7 +320,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                 prep = random.choice(['with','from','to','at','in'])
                 answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                 if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-                    potential_qa_list.append((element ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                    potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
                     entity_to_qa +=1
         elif shape and random.randint(0,3) == 0: 
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
@@ -342,7 +342,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                 prep = random.choice(['with','from','to','at','in'])
                 answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                 if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-                    potential_qa_list.append((element ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                    potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
                     entity_to_qa +=1
         elif random.randint(0,1) == 0:
           if  element.endswith("ing"):
