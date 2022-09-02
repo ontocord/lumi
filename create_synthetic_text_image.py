@@ -66,8 +66,8 @@ common_vlt5_words = ("background", "foreground", "left", "right", "nothing", "no
 mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyllic", \
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
                       "hopeful", "angry", "fearful", "tense", "lonely"]
-image_type_lst = ["rendering", "vector art ", "scene", "movie still", \
-                      "textbook illustration", "realistic drawing", "sketch", "cartoon", "painting"]
+image_type_lst = ["rendering", "vector-art ", "scene", "movie-still", \
+                      "textbook-illustration", "realistic-drawing", "sketch", "cartoon", "painting"]
                       
     
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
@@ -617,6 +617,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 matched_output, cropped_images = get_sent_to_img(matched_sentence, img, get_cropped_images=True, other_sent_arr=distractors + implied_entities)
                 distractors= set(distractors)
                 distractor_is_best_match = False
+                if matched_output:
+                  matched_output['score'] = sim1
                 if matched_output and matched_output['decomposed2text']:
                     items = list(matched_output['decomposed2text'].values())
                     items.sort(key=lambda a: a[1])
@@ -634,7 +636,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     out.write(str(matched_output)+"\n")
                     continue
                 else:
-                    matched_output['score'] = sim1
                     matched_output['tokens'] = tokens.tostring()
                     matched_output['thumbnail'] = np.array(img).tostring()
                     matched_output['prev_text'] = prev_text
@@ -710,14 +711,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
                         implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] + [a[0] for a in potential_qa_list] 
                         implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
+                        prefix_arr = []
                         if prefix:
                           prefix = prefix.replace(' of:', '')
                           prefix = prefix.split()
-                          prefix_arr = []
                           for pi in range(len(prefix)):
                             pr = " ".join(prefix[-pi+1:])
                             if pr not in generated_sentence:
-                              implied_entities.append(prefix)
+                              implied_entities.append(pr)
                               prefix_arr.append(pr)
                         for word in new_words:
                           if word not in generated_sentence:
@@ -730,6 +731,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                                                           implied_entities)
                         distractors = set(distractors)
                         distractor_is_best_match = False
+                        if matched_output2:
+                            matched_output2['score'] = sim2
                         if matched_output2 and matched_output2['decomposed2text'] and matched_output2['cropped2text']:
                             items = list(matched_output2['decomposed2text'].values())
                             items.sort(key=lambda a: a[1])
@@ -743,9 +746,21 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
-                          if prefix_array:
-                            if not (matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] in prefx_array)): 
-                              prefix = mood_type = image_type = None
+                          if  matched_output2['decomposed2text']:
+                              matched_prefix = [a for a in matched_output2['decomposed2text'].values() if a[0] in prefix_arr] 
+                              matched_prefix.sort(key=lambda a: len(a), reverse=True)
+                              if not matched_prefix:
+                                prefix = mood_type = image_type = None
+                              else:
+                                matched_prefix = matched_prefix[0]
+                                matched_prefix = matched_prefix.split()
+                                if len(matched_prefix) == 1:
+                                  mood_type = None
+                                  image_type = matched_prefix[0]
+                                else:
+                                  mood_type = matched_prefix[0]
+                                  image_type = matched_prefix[1]
+                            
                           if mood_type:
                             matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
                           if random.random() <= prob_add_qa_image_type:
