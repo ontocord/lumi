@@ -171,7 +171,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       scores2 =  min (1.0, (scores[cidx] + crop_add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
       cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[0])))
       cropped_scores.append(cropped_scores_topk[-1].values[0])
-    if not cropped_scores:
+    if cropped_scores:
      cropped2text = {}
      cropped_scores = torch.stack(cropped_scores)
      cindices = cropped_scores.sort().indices.tolist()
