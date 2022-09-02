@@ -627,7 +627,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     matched_output['prev_text'] = prev_text
                     if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
-                    matched_output['qa'] = list(set(matched_output.get('qa')))
+                    matched_output['qa'] = list(set(matched_output.get('qa',[])))
                     out.write(str(matched_output)+"\n")
                     continue
                 else:
@@ -636,7 +636,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
                     if qa: matched_output['qa'] = list(set(matched_output.get('qa',[]) + [qa]))
-                    matched_output['qa'] = list(set(matched_output.get('qa')))
+                    matched_output['qa'] = list(set(matched_output.get('qa',[])))
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
                     create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
@@ -762,7 +762,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         matched_output['cropped_image_features2'] = matched_output2['cropped_image_features']
                         matched_output['image_features2'] = matched_output2['image_features']
                         matched_output['matched_sentence2'] = matched_output2['matched_sentence']
-                        matched_output['qa2'] = list(set(matched_output2.get('qa')))
+                        matched_output['qa2'] = list(set(matched_output2.get('qa',[])))
                         if verbose:
                           cropped2text = matched_output2['cropped2text']
                           if cropped2text:
