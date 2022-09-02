@@ -238,7 +238,7 @@ def strip_left_stopwords(e_text):
         e_text2.append(et)
   return " ".join(e_text2)
 
-def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=5):
+def get_sent_to_img(matched_sentence, img, other_sent_arr=[], get_cropped_images=False, num_boxes=20):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
