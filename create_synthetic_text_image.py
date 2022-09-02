@@ -635,7 +635,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['prev_text'] = prev_text
                     matched_output['next_text'] = next_text
                     if qa: matched_output['qa'] = matched_output.get('qa',[]) + [qa]
-                    decomposed2text = matched_output['decomposed2text']
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
                     create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
@@ -653,8 +652,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if in_notebook: display(img)
                     dat_cnt += 1    
                     
-                    #now let's create a different sentence based on the elements of the previous sentence (including implied entities), using words have higher visual scores
-                    new_words = [a[0] for a in decomposed2text.values() if a[1] >= score_cutoff] 
+                    #now let's create a different sentence based on the elements of the previous sentence, using words that have higher visual scores
+                    new_words = [a[0] for a in  matched_output['decomposed2text'].values() if a[1] >= score_cutoff and word[0] in matched_sentence] 
                     word_str = ", ".join(new_words)
                     if word_str:
                       
