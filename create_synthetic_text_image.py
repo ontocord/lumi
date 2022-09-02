@@ -607,6 +607,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 potential_qa_list = create_qa_from_vlt5(matched_sentence, img,  aug2ent)
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
                 implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in  ("nothing", "nowhere", "unknown", "black", "white")]
+                print ('implied entities', implied_entities)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 # now find the entities and important verbs in the most similar sentence.
                 matched_output, cropped_images = get_sent_to_img(matched_sentence, img, get_cropped_images=True, other_sent_arr=distractors + implied_entities)
@@ -641,7 +642,6 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff)])
                          
                     if verbose:
-                      print ('implied entities', implied_entities)
                       cropped2text = matched_output['cropped2text']
                       if cropped2text:
                         for idx, vals in cropped2text.items():
@@ -713,6 +713,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
                       implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
                       implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in  ("nothing", "nowhere", "unknown", "black", "white")]
+                      print ('implied entities', implied_entities)
                       potential_qa_list = potential_qa_list + qa_list_gen
                       matched_output2, cropped_images = get_sent_to_img(generated_sentence, img, get_cropped_images=True, 
                                                                         other_sent_arr=distractors + \
