@@ -738,16 +738,16 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             image_type = "photo"
                           if image_type is not None:
                             matched_output2['qa'] = matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]
-                        matched_output['tokens'] = tokens.tostring()
-                        matched_output['thumbnail'] = np.array(img).tostring()
-                        matched_output['score'] = matched_output2['score']
-                        matched_output['decomposed2text'] = matched_output2['decomposed2text']
-                        matched_output['decomposed_image_features'] = matched_output2['decomposed_image_features']
-                        matched_output['cropped2text'] = matched_output2['cropped2text']
-                        matched_output['cropped_image_features'] = matched_output2['cropped_image_features']
-                        matched_output['image_features'] = matched_output2['image_features']
-                        matched_output['matched_sentence'] = matched_output2['matched_sentence']
-                        matched_output['qa'] = matched_output2.get('qa')
+                        matched_output['tokens2'] = tokens.tostring()
+                        matched_output['thumbnail2'] = np.array(img).tostring()
+                        matched_output['score2'] = matched_output2['score']
+                        matched_output['decomposed2text2'] = matched_output2['decomposed2text']
+                        matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
+                        matched_output['cropped2text2'] = matched_output2['cropped2text']
+                        matched_output['cropped_image_features2'] = matched_output2['cropped_image_features']
+                        matched_output['image_features2'] = matched_output2['image_features']
+                        matched_output['matched_sentence2'] = matched_output2['matched_sentence']
+                        matched_output['qa2'] = matched_output2.get('qa')
                         if verbose:
                           cropped2text = matched_output2['cropped2text']
                           if cropped2text:
