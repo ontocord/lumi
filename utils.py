@@ -171,16 +171,22 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       scores2 =  min (1.0, (scores[cidx] + add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
       cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[0])))
       cropped_scores.append(cropped_scores_topk[-1].values[0])
-    cropped2text = {}
-    cropped_scores = torch.stack(cropped_scores)
-    cindices = cropped_scores.sort().indices.tolist()
-    cindices.reverse()
-    for cidx in cindices:
-      text, topk = text_array2[cidx], cropped_scores_topk[cidx]
-      for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
-        if idx not in cropped2text: 
-          cropped2text[idx] = (text, score, coords[idx])
-          break
+    if not cropped_scores:
+     cropped2text = {}
+     cropped_scores = torch.stack(cropped_scores)
+     cindices = cropped_scores.sort().indices.tolist()
+     cindices.reverse()
+     for cidx in cindices:
+       text, topk = text_array2[cidx], cropped_scores_topk[cidx]
+       for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
+         if idx not in cropped2text: 
+           cropped2text[idx] = (text, score, coords[idx])
+           break
+    else:
+     cropped2text = None
+     cropped_scores_topk = None
+     cropped_scores = None
+     cropped_image_features  = None
   else:
     cropped2text = None
     cropped_scores_topk = None
