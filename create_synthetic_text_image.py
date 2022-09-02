@@ -349,7 +349,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                 answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                 if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
                     potential_qa_list.append((element, f"what is {element} {act} {prep}?||{answer}"))
-                    entity_to_qa +=1[
+                    entity_to_qa +=1
         elif random.randint(0,1) == 0:
           if  element.endswith("ing"):
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
