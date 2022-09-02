@@ -437,6 +437,7 @@ def create_qa(matched_output, img, score_cutoff, aug2ent, potential_qa_list=[]):
     if entity in l and ent2score.get(entity,0) >= score_cutoff:
       answer = question.split("||")[-1].strip()
       if ent2score.get(answer,1) >= score_cutoff:
+          print ('implied answer score', ent2score.get(answer,1))
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
@@ -636,6 +637,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
                     create_qa(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=potential_qa_list)
+                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < cutoff_score)])
+                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if not (b[0] in implied_entities and b[1] < cutoff_score)])
                          
                     if verbose:
                       print ('implied entities', implied_entities)
