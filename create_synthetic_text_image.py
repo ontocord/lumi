@@ -439,6 +439,8 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
         entity1, entity2 = entity1.strip(), entity2.strip()
+        print ('implied entity1 score', entity1, ent2score.get(entity1,0))
+        print ('implied entity2 score', entity2, ent2score.get(entity2,0))
         if (ent2score.get(entity1,0) >= score_cutoff) and (ent2score.get(entity2,0) >= score_cutoff):
           answer = question.split("||")[-1].strip()
           if ent2score.get(answer,1) >= score_cutoff*high_score_mult:
