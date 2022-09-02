@@ -656,7 +656,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                     min_length=len(word_str.split())*3, 
                                                                     max_length=len(word_str.split())*10, 
-                                                                    no_repeat_ngram_size=2, )
+                                                                    no_repeat_ngram_size=2, 
+                                                                    do_sample=True,
+                                                                    top_p=0.95,
+                                                                    top_k=10, )
                       generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                       if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                       generated_sentence = generated_sentence.strip()
