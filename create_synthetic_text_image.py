@@ -639,11 +639,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     if qa: matched_output['qa'] = list(set(matched_output.get('qa',[]) + [qa]))
                     matched_output['qa'] = list(set(matched_output.get('qa',[])))
-                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors])
-                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors])
+                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                     create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
-                    if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                    if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*1.2)])
                          
                     if verbose:
                       cropped2text = matched_output['cropped2text']
@@ -738,11 +736,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output2['decomposed2text'] and \
                           matched_output2['score'] >= mult*score_cutoff and \
                           len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
-                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and b[0] != prefix])
-                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and b[0] != prefix])
+                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and b[0] != prefix and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and b[0] != prefix and  not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                         create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
-                        if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                        if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                         if prefix:
                           if not (matched_output2['decomposed2text'] and any(a for a in matched_output2['decomposed2text'].values() if a[0] == prefix and a[1] >= score_cutoff*high_score_mult)): 
                             prefix = mood_type = image_type = None
