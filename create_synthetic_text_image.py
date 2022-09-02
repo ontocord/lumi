@@ -576,7 +576,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
               most_similar_idx = clip_output['scores'].sort().indices[-1]
               sim1 = clip_output['scores'][most_similar_idx].item()
               # clip scores of generated images tend to be lower; this filters out really bad matches
-              if sim1 > score_cutoff:    
+              if sim1 >= score_cutoff:    
                 matched_sentence = text3[most_similar_idx]
                 if not matched_sentence.strip(): continue
                 prev_text = next_text = ""
@@ -600,12 +600,14 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 
                 #let's do some cleanup of the ents since we injected more information then is in natural text
                 matched_sentence = simplify_aug(matched_sentence, aug2ent)
-                # now find the entities and important verbs in the most similar sentence. 
+                # create some distractor phrases
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['a clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
+                # infer implied entities based on the image
                 potential_qa_list = create_qa_from_vlt5(matched_sentence, img,  aug2ent)
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
                 implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in  ("nothing", "nowhere", "unknown", "black", "white")]
-                potential_qa_list = potential_qa_list + qa_list
+                potential_qa_list = list(set(potential_qa_list + qa_list))
+                # now find the entities and important verbs in the most similar sentence.
                 matched_output, cropped_images = get_sent_to_img(matched_sentence, img, get_cropped_images=True, other_sent_arr=distractors + implied_entities)
                 distractors= set(distractors)
                 distractor_is_best_match = False
@@ -636,6 +638,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     create_qa(matched_output, img, score_cutoff,  aug2ent, potential_qa_list=potential_qa_list)
                          
                     if verbose:
+                      print ('implied entities', implied_entities)
                       cropped2text = matched_output['cropped2text']
                       if cropped2text:
                         for idx, vals in cropped2text.items():
@@ -646,8 +649,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       if in_notebook: display(img)
                     dat_cnt += 1    
                     
-                    #now let's create a different sentence based on the elements of the previous sentence
-                    word_str = ", ".join([a[0] for a in decomposed2text.values() if a[1] >= score_cutoff and a[0] not in distractors and a[0] not in implied_entities])
+                    #now let's create a different sentence based on the elements of the previous sentence, using words have higher visual scores
+                    word_str = ", ".join([a[0] for a in decomposed2text.values() if a[1] >= score_cutoff and a[0] not in distractors]) #  and a[0] not in implied_entities
                     if word_str:
                       
                       generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
