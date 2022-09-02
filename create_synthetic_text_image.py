@@ -435,7 +435,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
-    if ent2score.get(entity,0) >= score_cutoff:
+    if entity in l or ent2score.get(entity,0)*.8 >= score_cutoff:
       answer = question.split("||")[-1].strip()
       if answer in l or ent2score.get(answer,1)*.8 >= score_cutoff:
           print ('implied answer score', answer, ent2score.get(answer,1))
@@ -443,7 +443,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
         entity1, entity2 = entity1.strip(), entity2.strip()
-        if ent2score.get(entity1,0) >= score_cutoff and ent2score.get(entity2,0) >= score_cutoff:
+        if (entity in l or ent2score.get(entity1,0) >= score_cutoff)*.8 and (entity in l or ent2score.get(entity2,0)*.8 >= score_cutoff):
           answer = question.split("||")[-1].strip()
           if answer in l or ent2score.get(answer,1)*.8 >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
