@@ -300,7 +300,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
           potential_qa_list.append((person, f"what is {person} feeling?||{answer}"))
     entity_to_qa = 0    
     elements = list(aug2ent.values())
-    elements.sort(key=lambda a: a[0], reverse=True)
+    elements.sort(key=lambda a: len(a), reverse=True)
     description = ""
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
     if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
@@ -440,9 +440,10 @@ def create_qa(matched_output, img, score_cutoff, aug2ent, potential_qa_list=[]):
       answer = question.split("||")[-1].strip()
       if ent2score.get(answer,1) >= score_cutoff:
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
-    elif ":" in entity: 
-        entity = entity.split(":")[-1].strip()
-        if entity in l and ent2score.get(entity,0) >= score_cutoff:
+    elif " and " in entity: 
+        entity1, entity2 = entity.split(" and ", 1)
+        entity1, entity2 = entity1.strip(), entity2.strip()
+        if entity1 in l and ent2score.get(entity1,0) >= score_cutoff and entity2 in l and ent2score.get(entity2,0) >= score_cutoff:
           answer = question.split("||")[-1].strip()
           if ent2score.get(answer,1) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
