@@ -609,7 +609,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 # infer implied entities based on the image
                 potential_qa_list = create_qa_from_vlt5((prev_text + " " + matched_sentence + " " + next_text).replace("  ", " ").strip(), img,  aug2ent)
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
-                implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]
+                implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
                 print ('implied entities', implied_entities)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 # now find the entities and important verbs in the most similar sentence.
