@@ -35,41 +35,52 @@ except:
   minidalle = spacy_nlp = clip_model= clip_processor= stopwords_set= vlt5 = None
   device = 'cuda'
 
+all_aug_words = []
 emotion_adj = ["surprised", "angry", "sad", "contemptous", "disgusted", "fearful", "happy"]
+all_aug_words.extend(emotion_adj)
 emotion_adj_set = set(emotion_adj)
 shape_adj = ["banana-shaped", "strawberry-shaped", "grapes-shaped", "apple-shaped", "watermelon-shaped", "orange-shaped", "blueberry-shaped", 
              "lemon-shaped", "large", "small", "medium", "tall", "broad", "crooked", \
              "curved", "deep", "even", "flat", "hilly", "jagged", \
               "round", "shallow", "square", "steep", "straight", "thick", \
               "thin", "triangular", "uneven"]
+all_aug_words.extend(shape_adj)
 shape_adj_set = set(shape_adj)
 color_adj = ["brown", "black", "blue", "gray", "green", "pink", "purple", "red", "white", "yellow",] #orange confuses image generators to generate an orange fruit
+all_aug_words.extend(color_adj)
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
 person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
+all_aug_words.extend(person_lst)
 person_lst_set = set(person_lst)
 age_adj_lst = ["young", "teen", "young-adult", "middle-aged", "old"]
+all_aug_words.extend(age_adj_lst)
 age_adj_set = set(age_adj_lst)
 
 religion_lst = ["christian", "muslim", "buddhist", "hindu"]
+all_aug_words.extend(religion_lst)
 religion_lst_set = set(religion_lst)
 race_lst = ["white", "black", "asian", "middle-eastern", "african", "hispanic", "native", "indian"]
+all_aug_words.extend(race_lst)
 race_lst_set = set(race_lst)
 sexual_orientation_lst = ["gay", "straight", "bisexual",]
+all_aug_words.extend(sexual_orientation_lst)
 sexual_orientation_lst_set = set(sexual_orientation_lst)
 political_affiliation_lst = ["conservative", "liberal", "moderate"]
+all_aug_words.extend(political_affiliation_lst)
 political_affiliation_lst_set = set(political_affiliation_lst)
 
 common_vlt5_words = ("true", "false", "yes", "no", "background", "foreground", "left", "right", "above", "below", "center", "middle", "in front", "behind", "nothing", "nowhere", "unknown", "black", "white", "more", "less", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )
-
+all_aug_words.extend(common_vlt5_words)
 mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyllic", \
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
                       "hopeful", "angry", "fearful", "tense", "lonely"]
+all_aug_words.extend(mood_lst)
 image_type_lst = ["rendering", "vector-art ", "scene", "movie-still", \
                       "textbook-illustration", "realistic-drawing", "sketch", "cartoon", "painting"]
-                      
-
+all_aug_words.extend(image_type_lst)                      
+all_aug_words = set(all_aug_words)
 stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including"])
     
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
@@ -812,13 +823,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               matched_output2['score'] >= mult*score_cutoff and \
                               (not matched_output['box2element'] or any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)) and \
                               len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
-                            if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
-                            if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
-                            if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                            if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                            if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
-                              create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
-                              if  matched_output2['decomposed2element']:
+                            if  matched_output2['decomposed2element']:
                                   matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
                                   matched_prefix.sort(key=lambda a: len(a), reverse=True)
                                   if not matched_prefix:
@@ -832,7 +837,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                     else:
                                       mood_type = matched_prefix[0]
                                       image_type = matched_prefix[1]
-
+                            if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
+                            if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
+                            if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                            if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                            if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
+                              create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                               if mood_type:
                                 matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
                               if random.random() <= prob_add_qa_image_type:
