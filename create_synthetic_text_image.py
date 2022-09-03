@@ -630,10 +630,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
                 potential_qa_list = create_qa_from_vlt5((prev_text + " " + matched_sentence + " " + next_text).replace("  ", " ").strip(), img,  aug2ent)
+                potential_qa_list = list(set(potential_qa_list + qa_list))
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                 implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
                 print ('implied entities', implied_entities)
-                potential_qa_list = list(set(potential_qa_list + qa_list))
                 # now find the entities and important verbs in the most similar sentence.
                 matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                 distractors= set(distractors)
@@ -669,160 +669,160 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       
                     if matched_output['decomposed2element']: matched_output['decomposed2element'] = dict([(a, b) for a,b in matched_output['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                     if matched_output['box2element']: matched_output['box2element'] = dict([(a, b) for a,b in matched_output['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                    create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
-                         
-                    if verbose:
-                      box2element = matched_output['box2element']
-                      if box2element:
-                        for idx, vals in box2element.items():
-                          ci = box_images[idx]
-                          print (vals)
-                          if in_notebook: display(PIL.Image.fromarray(ci))
-                      print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2element'], '***', matched_output.get('qa'))
-                      if in_notebook: display(img)
-                    dat_cnt += 1    
-                    
-                    #now let's create a different sentence based on the elements of the previous sentence, using words that have higher visual scores
-                    new_words = [a[0] for a in  matched_output['decomposed2element'].values() if a[1] >= score_cutoff and a[0] in matched_sentence] 
-                    word_str = ", ".join(new_words)
-                    if word_str:
-                      generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
-                                                                    min_length=len(word_str.split())*3, 
-                                                                    max_length=len(word_str.split())*10, 
-                                                                    no_repeat_ngram_size=2)
-                      generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
-                      if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
-                      generated_sentence = generated_sentence.strip()
-                      l_lower = generated_sentence.lower()
-                      if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
-                      if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
-                          generated_sentence = generated_sentence.split(",")
-                          for i in range(len(generated_sentence)):
-                            if random.randint(0,4) == 0: 
-                                generated_sentence[i] = generated_sentence[i]+"."
-                            else:
-                                generated_sentence[i] = generated_sentence[i]+","
+                    if any(a for a in matched_output['decomposed2element'].values() if a[1] >= score_cutoff):
+                      create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)                         
+                      if verbose:
+                        box2element = matched_output['box2element']
+                        if box2element:
+                          for idx, vals in box2element.items():
+                            ci = box_images[idx]
+                            print (vals)
+                            if in_notebook: display(PIL.Image.fromarray(ci))
+                        print ( matched_output['score'], '**', matched_output['matched_sentence'], '***', aug2ent, '***', matched_output['decomposed2element'], '***', matched_output.get('qa'))
+                        if in_notebook: display(img)
+                      dat_cnt += 1    
 
-                          generated_sentence = "".join(generated_sentence)
-                      
-                      #augment the sentence with fake data    
-                      generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
-                      generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
-                      aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
-                      qa_list_gen = qa_list_gen + qa_list
-
-                      if any(a for a in emotion_adj if a in generated_sentence):
-                        mood_type = ""
-                      else:
-                        mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
-                      image_type = random.choice(["", "",  "", "", "",  "",] + image_type_lst)
-                      if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
-                        mult = 1.0
-                        prob_add_qa_image_type = 0.5
-                      else:
-                        #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
-                        mult = high_score_mult
-                        prob_add_qa_image_type = 1.0
-                        
-                      prefix = ""
-                      if mood_type and not image_type:
-                        prefix =  mood_type + " picture of:" 
-                      elif not mood_type and image_type:
-                        prefix = image_type +" of:"
-                      elif mood_type and image_type:
-                        prefix = mood_type + " " + image_type +" of:"
-                      #generate an image 
-                      tokens, img = minidalle.generate(prefix + " " + generated_sentence  if prefix else generated_sentence, image_output=True, token_output=True)
-                      img = img.resize((100,100))
-                      tokens = tokens.cpu().numpy()
-                      tokens.dtype = np.int16
-                      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
-                      if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
-                        sim2 = clip_output['scores'][0].item()
-                        # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
-                        generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
-                        distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
-                        potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen) + qa_list_gen
-                                                                                                                 
-                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
-                        implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
-                        prefix_arr = []
-                        if prefix:
-                          prefix = prefix.replace(' of:', '')
-                          prefix = prefix.split()
-                          for pi in range(len(prefix)):
-                            pr = " ".join(prefix[-pi+1:])
-                            if pr not in generated_sentence:
-                              implied_entities.append(pr)
-                              prefix_arr.append(pr)
-                        for word in new_words:
-                          if word not in generated_sentence:
-                            implied_entities.append(word)
-                        implied_entities = list(set(implied_entities)) 
-                        print ('implied entities', implied_entities)
-                        potential_qa_list = potential_qa_list + qa_list_gen
-                        matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
-                        distractors = set(distractors)
-                        distractor_is_best_match = False
-                        if matched_output2:
-                            matched_output2['score'] = sim2
-                        if matched_output2 and matched_output2['decomposed2element'] and matched_output2['box2element']:
-                            items = list(matched_output2['decomposed2element'].values())
-                            items.sort(key=lambda a: a[1])
-                            if items[-1][0] in distractors:
-                              distractor_is_best_match = True
-                              print ('distractor 1', items)
-                        if matched_output2 and not distractor_is_best_match and \
-                            matched_output2['decomposed2element'] and \
-                            matched_output2['score'] >= mult*score_cutoff and \
-                            len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
-                          if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
-                          if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
-                          if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                          if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                          create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
-                          if  matched_output2['decomposed2element']:
-                              matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
-                              matched_prefix.sort(key=lambda a: len(a), reverse=True)
-                              if not matched_prefix:
-                                prefix = mood_type = image_type = None
+                      #now let's create a different sentence based on the elements of the previous sentence, using words that have higher visual scores
+                      new_words = [a[0] for a in  matched_output['decomposed2element'].values() if a[1] >= score_cutoff and a[0] in matched_sentence] 
+                      word_str = ", ".join(new_words)
+                      if word_str:
+                        generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
+                                                                      min_length=len(word_str.split())*3, 
+                                                                      max_length=len(word_str.split())*10, 
+                                                                      no_repeat_ngram_size=2)
+                        generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
+                        if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
+                        generated_sentence = generated_sentence.strip()
+                        l_lower = generated_sentence.lower()
+                        if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
+                        if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
+                            generated_sentence = generated_sentence.split(",")
+                            for i in range(len(generated_sentence)):
+                              if random.randint(0,4) == 0: 
+                                  generated_sentence[i] = generated_sentence[i]+"."
                               else:
-                                matched_prefix = matched_prefix[0]
-                                matched_prefix = matched_prefix.split()
-                                if len(matched_prefix) == 1:
-                                  mood_type = None
-                                  image_type = matched_prefix[0]
-                                else:
-                                  mood_type = matched_prefix[0]
-                                  image_type = matched_prefix[1]
-                            
-                          if mood_type:
-                            matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
-                          if random.random() <= prob_add_qa_image_type:
-                            if image_type== "": 
-                              image_type = "photo"
-                            if image_type is not None:
-                              matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
-                          matched_output['tokens2'] = tokens.tostring()
-                          matched_output['thumbnail2'] = np.array(img).tostring()
-                          matched_output['score2'] = sim2
-                          matched_output['element2img2'] = matched_output2['element2img']
-                          matched_output['decomposed2element2'] = matched_output2['decomposed2element']
-                          matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
-                          matched_output['box2element2'] = matched_output2['box2element']
-                          matched_output['box_image_features2'] = matched_output2['box_image_features']
-                          matched_output['image_features2'] = matched_output2['image_features']
-                          matched_output['matched_sentence2'] = matched_output2['matched_sentence']
-                          matched_output['qa2'] = list(set(matched_output2.get('qa',[])))
-                          if verbose:
-                            box2element = matched_output2['box2element']
-                            if box2element:
-                              for idx, vals in box2element.items():
-                                ci = box_images[idx]
-                                print (vals)
-                                if in_notebook: display(PIL.Image.fromarray(ci))
-                              print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2element'], '***', matched_output2.get('qa'))
-                              if in_notebook: display(img)  
+                                  generated_sentence[i] = generated_sentence[i]+","
+
+                            generated_sentence = "".join(generated_sentence)
+
+                        #augment the sentence with fake data    
+                        generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
+                        generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
+                        aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
+                        qa_list_gen = qa_list_gen + qa_list
+
+                        if any(a for a in emotion_adj if a in generated_sentence):
+                          mood_type = ""
+                        else:
+                          mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
+                        image_type = random.choice(["", "",  "", "", "",  "",] + image_type_lst)
+                        if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
+                          mult = 1.0
+                          prob_add_qa_image_type = 0.5
+                        else:
+                          #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
+                          mult = high_score_mult
+                          prob_add_qa_image_type = 1.0
+
+                        prefix = ""
+                        if mood_type and not image_type:
+                          prefix =  mood_type + " picture of:" 
+                        elif not mood_type and image_type:
+                          prefix = image_type +" of:"
+                        elif mood_type and image_type:
+                          prefix = mood_type + " " + image_type +" of:"
+                        #generate an image 
+                        tokens, img = minidalle.generate(prefix + " " + generated_sentence  if prefix else generated_sentence, image_output=True, token_output=True)
+                        img = img.resize((100,100))
+                        tokens = tokens.cpu().numpy()
+                        tokens.dtype = np.int16
+                        clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
+                        if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
+                          sim2 = clip_output['scores'][0].item()
+                          # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
+                          generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
+                          distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
+                          potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen) + qa_list_gen
+                          implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
+                          implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
+                          prefix_arr = []
+                          if prefix:
+                            prefix = prefix.replace(' of:', '')
+                            prefix = prefix.split()
+                            for pi in range(len(prefix)):
+                              pr = " ".join(prefix[-pi+1:])
+                              if pr not in generated_sentence:
+                                implied_entities.append(pr)
+                                prefix_arr.append(pr)
+                          for word in new_words:
+                            if word not in generated_sentence:
+                              implied_entities.append(word)
+                          implied_entities = list(set(implied_entities)) 
+                          print ('implied entities', implied_entities)
+                          potential_qa_list = potential_qa_list + qa_list_gen
+                          matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
+                          distractors = set(distractors)
+                          distractor_is_best_match = False
+                          if matched_output2:
+                              matched_output2['score'] = sim2
+                          if matched_output2 and matched_output2['decomposed2element'] and matched_output2['box2element']:
+                              items = list(matched_output2['decomposed2element'].values())
+                              items.sort(key=lambda a: a[1])
+                              if items[-1][0] in distractors:
+                                distractor_is_best_match = True
+                                print ('distractor 1', items)
+                          if matched_output2 and not distractor_is_best_match and \
+                              matched_output2['decomposed2element'] and \
+                              matched_output2['score'] >= mult*score_cutoff and \
+                              len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
+                            if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
+                            if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
+                            if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                            if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                            if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
+                              create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
+                              if  matched_output2['decomposed2element']:
+                                  matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
+                                  matched_prefix.sort(key=lambda a: len(a), reverse=True)
+                                  if not matched_prefix:
+                                    prefix = mood_type = image_type = None
+                                  else:
+                                    matched_prefix = matched_prefix[0]
+                                    matched_prefix = matched_prefix.split()
+                                    if len(matched_prefix) == 1:
+                                      mood_type = None
+                                      image_type = matched_prefix[0]
+                                    else:
+                                      mood_type = matched_prefix[0]
+                                      image_type = matched_prefix[1]
+
+                              if mood_type:
+                                matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
+                              if random.random() <= prob_add_qa_image_type:
+                                if image_type== "": 
+                                  image_type = "photo"
+                                if image_type is not None:
+                                  matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
+                              matched_output['tokens2'] = tokens.tostring()
+                              matched_output['thumbnail2'] = np.array(img).tostring()
+                              matched_output['score2'] = sim2
+                              matched_output['element2img2'] = matched_output2['element2img']
+                              matched_output['decomposed2element2'] = matched_output2['decomposed2element']
+                              matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
+                              matched_output['box2element2'] = matched_output2['box2element']
+                              matched_output['box_image_features2'] = matched_output2['box_image_features']
+                              matched_output['image_features2'] = matched_output2['image_features']
+                              matched_output['matched_sentence2'] = matched_output2['matched_sentence']
+                              matched_output['qa2'] = list(set(matched_output2.get('qa',[])))
+                              if verbose:
+                                box2element = matched_output2['box2element']
+                                if box2element:
+                                  for idx, vals in box2element.items():
+                                    ci = box_images[idx]
+                                    print (vals)
+                                    if in_notebook: display(PIL.Image.fromarray(ci))
+                                  print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2element'], '***', matched_output2.get('qa'))
+                                  if in_notebook: display(img)  
                     dat_cnt += 1
                     out.write(str(matched_output)+"\n")
                     
