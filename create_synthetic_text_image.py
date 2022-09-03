@@ -370,9 +370,8 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
         prev_element = element
     return list(set(potential_qa_list))
                     
-def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_score_mult=1.2):
+def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
-  l = matched_output['matched_sentence']
   ent2score = {}
   if True:
     decomposed2text = matched_output.get('decomposed2text', {})
@@ -435,7 +434,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
     print ('implied entity score', entity, ent2score.get(entity,0))
     if ent2score.get(entity,0) >= score_cutoff:
       answer = question.split("||")[-1].strip()
-      if ent2score.get(answer,1) >= score_cutoff*high_score_mult:
+      if ent2score.get(answer,1) >= score_cutoff:
           print ('implied answer score', answer, ent2score.get(answer,1))
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     elif " and " in entity: 
@@ -445,7 +444,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[], high_scor
         print ('implied entity2 score', entity2, ent2score.get(entity2,0))
         if (ent2score.get(entity1,0) >= score_cutoff) and (ent2score.get(entity2,0) >= score_cutoff):
           answer = question.split("||")[-1].strip()
-          if ent2score.get(answer,1) >= score_cutoff*high_score_mult:
+          if ent2score.get(answer,1) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
         
       
@@ -608,8 +607,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 # create some distractor phrases
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
-                potential_qa_list = create_qa_from_vlt5(matched_sentence, img,  aug2ent)
-                implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] 
+                potential_qa_list = create_qa_from_vlt5((prev_text + " " + matched_sentence + " " + next_text).replace("  ", " ").strip(), img,  aug2ent)
+                implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  itertools.chain(*([a[0] for a in potential_qa_list if " and " not in a[0] else a[0].split(" and ")]))
                 implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]
                 print ('implied entities', implied_entities)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
@@ -644,7 +643,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['qa'] = list(set(matched_output.get('qa',[])))
                     if matched_output['decomposed2text']: matched_output['decomposed2text'] = dict([(a, b) for a,b in matched_output['decomposed2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                     if matched_output['cropped2text']: matched_output['cropped2text'] = dict([(a, b) for a,b in matched_output['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                    create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                    create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
                          
                     if verbose:
                       cropped2text = matched_output['cropped2text']
@@ -708,8 +707,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                         generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
                         distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
-                        potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen)
-                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] + [a[0] for a in potential_qa_list] 
+                        potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen) + qa_list_gen
+                                                                                                                 
+                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  itertools.chain(*([a[0] for a in potential_qa_list if " and " not in a[0] else a[0].split(" and ")]))
                         implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
                         prefix_arr = []
                         if prefix:
@@ -745,7 +745,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             len([a for a in matched_output2['decomposed2text'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2text'])*.5):
                           if matched_output2['decomposed2text']: matched_output2['decomposed2text'] = dict([(a, b) for a,b in matched_output2['decomposed2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
-                          create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list, high_score_mult=high_score_mult)
+                          create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                           if  matched_output2['decomposed2text']:
                               matched_prefix = [a for a in matched_output2['decomposed2text'].values() if a[0] in prefix_arr] 
                               matched_prefix.sort(key=lambda a: len(a), reverse=True)
