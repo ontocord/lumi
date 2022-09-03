@@ -238,7 +238,7 @@ def strip_left_stopwords(e_text):
   return " ".join(e_text2)
 
 #given a sentence, break the sentence up into elements (ner, verbs, etc.) and match against the img, in the aggregate as well as against boxes
-def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, min_num_boxes=5, box_add_factor=0.65):
+def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, min_num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
@@ -260,9 +260,9 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       num_boxes = max(min_num_boxes, int(len(text4)/2))
       normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
       
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=ignore_from_box, box_add_factor=box_add_factor)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs]) + ignore_from_box, box_add_factor=box_add_factor)  
     else:
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=verbs+ignore_from_box, box_add_factor=box_add_factor)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=([] if box_detect_verbs else verbs]) + ignore_from_box, box_add_factor=box_add_factor)  
 
     if clip_output is not None:
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
@@ -410,7 +410,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
       for element, score, coord in box2element.values():
         if score >= score_cutoff:
           if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?|| {element}")] 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?||{element}")] 
             background_element = element
             continue
           x_center = (coord[0] + (coord[2] - coord[0])/2.0)  
@@ -419,35 +419,35 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
             prev_element, prev_score, prev_coord = prev_small_element
             if x_center   - (prev_coord[0] + (prev_coord[2] - prev_coord[0])/2.0) > 25: 
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| left")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?||left")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| right")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?||right")] 
               prev_small_element = None
               continue
             elif y_center   - (prev_coord[1] + (prev_coord[3] - prev_coord[1])/2.0)> 25:  
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| above")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?||above")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| below")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?||below")] 
               prev_small_element = None
               continue            
           if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
             if  background_element:
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?|| behind")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?||behind")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?||in front")] 
               background_element= None
             if x_center  < 25:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||left")]
             elif x_center > 75:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||right")]
             elif x_center > 40 and x_center < 60 and y_center > 40 and y_center < 60:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||center")]
             elif y_center < 25:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| top")] 
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||top")] 
             elif y_center > 75:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| bottom")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||bottom")]
             if coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
             continue  
           
@@ -507,7 +507,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           l, answer = l.split("?||",1)
           l_arr = l.split(".")
           l = ".".join(l_arr[:-1])
-          qa = (l_arr[-1]+"?|| "+answer).strip()
+          qa = (l_arr[-1]+"?||"+answer).strip()
         #TODO, detect public figures which we will replace with lower frequency
         other_person_list = []
         #gender swap to balance out the dataset
