@@ -663,6 +663,10 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     matched_output['next_text'] = next_text
                     if qa: matched_output['qa'] = list(set(matched_output.get('qa',[]) + [qa]))
                     matched_output['qa'] = list(set(matched_output.get('qa',[])))
+                    
+                    if matched_output['decomposed2element']: print([(a, b) for a,b in matched_output['decomposed2element'].items() if (b[0] in implied_entities)])
+                    if matched_output['box2element']: print([(a, b) for a,b in matched_output['box2element'].items() if (b[0] in implied_entities)])
+                      
                     if matched_output['decomposed2element']: matched_output['decomposed2element'] = dict([(a, b) for a,b in matched_output['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                     if matched_output['box2element']: matched_output['box2element'] = dict([(a, b) for a,b in matched_output['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                     create_qa(matched_output, img, score_cutoff, potential_qa_list=potential_qa_list)
@@ -707,7 +711,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                       aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
                       qa_list_gen = qa_list_gen + qa_list
 
-                      if any(a for a in emotion_adj_lst if a in generated_sentence):
+                      if any(a for a in emotion_adj if a in generated_sentence):
                         mood_type = ""
                       else:
                         mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
@@ -774,6 +778,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             matched_output2['decomposed2element'] and \
                             matched_output2['score'] >= mult*score_cutoff and \
                             len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
+                          if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
+                          if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
                           if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
