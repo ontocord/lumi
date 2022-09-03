@@ -435,6 +435,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 
     for entity, score in ent2score.items():
       if entity not in l and score >= score_cutoff:
+         print ("adding new entity", entity)
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
           
     # create some qa from coordinates of elements     
