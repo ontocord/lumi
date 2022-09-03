@@ -112,7 +112,7 @@ def load_json_like_from_str(s, **kwargs):
              ret[key] = Image.fromarray(ret[key])
       return ret
 
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.55, decompose_image=False, normalized_boxes=None, ignore_from_box=None):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_box=None):
   if ignore_from_box is None: ignore_from_box = {}
   p = next(clip_model.parameters())
   decomposed_image_features = None 
