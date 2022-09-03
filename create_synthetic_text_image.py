@@ -260,9 +260,9 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       num_boxes = max(min_num_boxes, int(len(text4)/2))
       normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
       
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs]) + ignore_from_box, box_add_factor=box_add_factor)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)  
     else:
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=([] if box_detect_verbs else verbs]) + ignore_from_box, box_add_factor=box_add_factor)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)  
 
     if clip_output is not None:
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
