@@ -225,7 +225,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
   l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
   l = l.replace(" an the", " the").replace(" a the", " the").replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
   l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")          
-  return l, aug2ent, qa_list
+  return l, aug2ent, list(set(qa_list))
 
 
 def strip_left_stopwords(e_text):
@@ -469,7 +469,8 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
         
-      
+  matched_output['qa'] = list(set(matched_output.get('qa',[]))) 
+  
 #saves away a json of from {'matched_sentence': <str>, 'score': <float>, ...
 #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
 #image is shape = [100,100,3], dtype="uint8"
