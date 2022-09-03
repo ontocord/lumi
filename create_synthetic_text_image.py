@@ -433,9 +433,8 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
       for element, score, coord in box2element.values():
         ent2score[element] = max(ent2score.get(element, 0), score)
 
-    for entity, score in ent2score.items():
-      if entity not in l and score >= score_cutoff:
-         print ("adding new entity", entity)
+    for element, score in ent2score.items():
+      if element not in l and score >= score_cutoff:
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
           
     # create some qa from coordinates of elements     
