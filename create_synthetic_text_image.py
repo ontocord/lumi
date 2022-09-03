@@ -193,11 +193,13 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
         get_person_questions(aug_word, qa_list)        
-    elif e_label in ('PRODUCT', 'EVENT', 'WORK_OF_ART', 'OBJ') and do_obj:
+    elif e_label in ('PRODUCT', 'WORK_OF_ART', 'OBJ') and do_obj:
         aug_word =  aug_obj(e_text)
         thing =  " ".join(aug_word.split()[1:])
         color = [a for a in aug_word.split() if a in color_adj_set]
         if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
+    elif e_label in ('EVENT',) and do_obj:
+       qa_list.append((e_text, f"where is this picture?||{e_text}"))
     else:
         aug_word = e_text
     l = l.replace(e_text, aug_word,1)
@@ -277,7 +279,7 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       return matched_output, clip_output['box_images']
   return None, None    
 
-def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
+def create_qa_from_vlt5(l, img,  aug2ent, potential_qa_list=None):
     if potential_qa_list is None: potential_qa_list = []
     prev_element = "" 
     if " woman " in l:
@@ -299,7 +301,13 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
 
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many people are in this picture?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-          potential_qa_list.append(('people', f"how many people are in this picture?||{answer}"))
+          if answer == "1": answer = "one person"
+          if answer == "2": answer = "two people"
+          if answer == "3": answer = "three people"
+          if answer == "4": answer = "four people"
+          if answer == "5": answer = "five people"  
+          potential_qa_list.append((person, f"how many people are in this picture?||{answer}"))
+          
           
     entity_to_qa = 0    
     elements = list(aug2ent.values())
@@ -313,7 +321,6 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
     answer2qa = {}
     for element in elements:
         if element != description and element not in l: continue
-        if entity_to_qa >= max_qa: break
         color = [a for a in element.split() if a in color_adj_set]
         shape = [a for a in element.split() if a in shape_adj_set]
         if element == description:
@@ -326,40 +333,61 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
               potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
               entity_to_qa +=1
               if answer.endswith("ing"):
-                act = answer
-                prep = random.choice(['with','from','to','at','in'])
-                answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
-                if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                    potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
-                    entity_to_qa +=1
-        elif shape and random.randint(0,3) == 0: 
+                if random.randint(0,1) == 0:
+                  act = answer
+                  prep = random.choice(['with','from','to','at','in'])
+                  answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
+                  if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+                      potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                      entity_to_qa +=1
+                else:
+                  act = answer
+                  prep = random.choice(['with','from','to','at','in'])
+                  answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} {act}?",  img)["text"]
+                  if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+                      potential_qa_list.append((element + ' and ' + act, f"why is {element} {act}?||{answer}"))
+                      entity_to_qa +=1
+        if shape: 
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
               potential_qa_list.append((element, f"what shape is {element}?||{answer}"))
               entity_to_qa +=1
-        elif color and random.randint(0,3) == 0: 
+        if color: 
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               potential_qa_list.append((element, f"what color is {element}?||{answer}"))
               entity_to_qa +=1
-        elif random.randint(0,3) == 0: 
+        if True:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many {element} are in this picture?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+              if answer == "1": answer = f"one {element}"
+              if answer == "2": answer = f"two {element}"
+              if answer == "3": answer = f"three {element}"
+              if answer == "4": answer = f"four {element}"
+              if answer == "5": answer = f"five {element}"
               potential_qa_list.append((element, f"how many {element} are in this picture?||{answer}"))
               entity_to_qa +=1
-        elif random.randint(0,1) == 0 and not (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
+        if (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
               entity_to_qa +=1
               if answer.endswith("ing"):
-                act = answer
-                prep = random.choice(['with','from','to','at','in'])
-                answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
-                if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                    potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
-                    entity_to_qa +=1
-        elif random.randint(0,1) == 0:
+                if random.randint(0,1) == 0:
+                  act = answer
+                  prep = random.choice(['with','from','to','at','in'])
+                  answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
+                  if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+                      potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                      entity_to_qa +=1
+                else:
+                  act = answer
+                  prep = random.choice(['with','from','to','at','in'])
+                  answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} {act}?",  img)["text"]
+                  if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+                      potential_qa_list.append((element + ' and ' + act, f"why is {element} {act}?||{answer}"))
+                      entity_to_qa +=1
+        if random.randint(0,1) == 0:
           if  element.endswith("ing"):
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
@@ -370,7 +398,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
                 potential_qa_list.append((element, f"what is {element} for?||{answer}"))
                 entity_to_qa +=1
-        elif random.randint(0,1) == 0 and prev_element:
+        if random.randint(0,1) == 0 and prev_element:
           if random.randint(0,1) == 0:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
@@ -382,7 +410,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
                 potential_qa_list.append((element+' and '+ prev_element, f"are there more or less {element} then {prev_element}?||{answer}"))
                 entity_to_qa +=1
             
-        elif random.randint(0,1) == 0:
+        if random.randint(0,1) == 0:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               potential_qa_list.append((element, f"where is {element}?||{answer}"))
