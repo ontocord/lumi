@@ -199,6 +199,7 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         color = [a for a in aug_word.split() if a in color_adj_set]
         if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
     elif e_label in ('EVENT',) and do_obj:
+       aug_word = e_text
        qa_list.append((e_text, f"where is this picture?||{e_text}"))
     else:
         aug_word = e_text
