@@ -130,7 +130,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       if l < 0.20: continue
       box_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x2)*shape[0]), int((y2)*shape[1])]
       coords.append(box_img_coord)
-      box_PIL_img = pil_image.box(box_img_coord)
+      box_PIL_img = pil_image.crop(box_img_coord)
       imgs.append(np.array(box_PIL_img))
       #display(box_PIL_img)  
   else:
