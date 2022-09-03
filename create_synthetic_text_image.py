@@ -608,7 +608,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
                 potential_qa_list = create_qa_from_vlt5((prev_text + " " + matched_sentence + " " + next_text).replace("  ", " ").strip(), img,  aug2ent)
-                implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  itertools.chain(*([a[0] for a in potential_qa_list if " and " not in a[0] else a[0].split(" and ")]))
+                implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list])
                 implied_entities = [a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]
                 print ('implied entities', implied_entities)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
@@ -709,7 +709,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                         potential_qa_list = create_qa_from_vlt5(generated_sentence, img,  aug2ent_gen) + qa_list_gen
                                                                                                                  
-                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  itertools.chain(*([a[0] for a in potential_qa_list if " and " not in a[0] else a[0].split(" and ")]))
+                        implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +    itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list])
                         implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
                         prefix_arr = []
                         if prefix:
