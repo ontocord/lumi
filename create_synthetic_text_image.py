@@ -808,7 +808,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           matched_output['tokens2'] = tokens.tostring()
                           matched_output['thumbnail2'] = np.array(img).tostring()
                           matched_output['score2'] = sim2
-                          matched_output['element2image2'] = matched_output2['element2image']
+                          matched_output['element2img2'] = matched_output2['element2img']
                           matched_output['decomposed2element2'] = matched_output2['decomposed2element']
                           matched_output['decomposed_image_features2'] = matched_output2['decomposed_image_features']
                           matched_output['box2element2'] = matched_output2['box2element']
