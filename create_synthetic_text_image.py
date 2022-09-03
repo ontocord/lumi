@@ -238,7 +238,7 @@ def strip_left_stopwords(e_text):
   return " ".join(e_text2)
 
 #given a sentence, break the sentence up into elements (ner, verbs, etc.) and match against the img, in the aggregate as well as against boxes
-def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, min_num_boxes=5):
+def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, min_num_boxes=5, box_add_factor=0.65):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
@@ -260,9 +260,9 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       num_boxes = max(min_num_boxes, int(len(text4)/2))
       normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
       
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=ignore_from_box)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=ignore_from_box, box_add_factor=box_add_factor)  
     else:
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=verbs+ignore_from_box)  
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=verbs+ignore_from_box, box_add_factor=box_add_factor)  
 
     if clip_output is not None:
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
@@ -475,7 +475,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
       
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -635,7 +635,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 print ('implied entities', implied_entities)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 # now find the entities and important verbs in the most similar sentence.
-                matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities)
+                matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                 distractors= set(distractors)
                 distractor_is_best_match = False
                 if matched_output:
@@ -761,9 +761,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         implied_entities = list(set(implied_entities)) 
                         print ('implied entities', implied_entities)
                         potential_qa_list = potential_qa_list + qa_list_gen
-                        matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, 
-                                                                          other_element_arr=distractors + \
-                                                                          implied_entities)
+                        matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                         distractors = set(distractors)
                         distractor_is_best_match = False
                         if matched_output2:
@@ -840,13 +838,14 @@ if __name__ == "__main__":
     parser.add_argument('-pytorch_device', dest='pytorch_device', type=str, help='the device', default= "cuda")
     parser.add_argument('-verbose', dest='verbose', type=int, help='verbse mode', default= 0)
     parser.add_argument('-high_score_mult', dest='high_score_mult', type=float, help='multiple of score_cutff for implied data', default= 1.2)
+    parser.add_argument('-box_add_factor', dest='box_add_factor', type=float, help='weight to add to text match score when determining text to box scores', default=0.65)
     args = parser.parse_args()
     create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
                                      input_en_txt_gz_file=args.input_en_txt_gz_file, \
                                      max_items=args.max_items, \
                                      score_cutoff=args.score_cutoff, \
                                      max_img_per_doc=args.max_img_per_doc, \
-                                     trimmed_text_word_len=args.trimmed_text_word_len, \
+                                     trimmed_text_word_len=args.trimmed_text_word_len, box_add_factor=args.box_add_factor \
                                      verbose=args.verbose, high_score_mult=args.high_score_mult, \
                                      pytorch_device=args.pytorch_device)
  
