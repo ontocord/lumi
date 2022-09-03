@@ -358,7 +358,7 @@ def create_potential_qa_from_vlt5(l, img,  aug2ent):
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               potential_qa_list.append((element, f"what color is {element}?||{answer}"))
               entity_to_qa +=1
-        if True:
+        if element.lower() == element and len(element) <= 5:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many {element} are in this picture?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               if answer == "1": answer = f"one {element}"
