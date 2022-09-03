@@ -747,7 +747,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if matched_output2['cropped2text']: matched_output2['cropped2text'] = dict([(a, b) for a,b in matched_output2['cropped2text'].items() if b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                           create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                           if  matched_output2['decomposed2text']:
-                              matched_prefix = [a for a in matched_output2['decomposed2text'].values() if a[0] in prefix_arr] 
+                              matched_prefix = [a[0] for a in matched_output2['decomposed2text'].values() if a[0] in prefix_arr] 
                               matched_prefix.sort(key=lambda a: len(a), reverse=True)
                               if not matched_prefix:
                                 prefix = mood_type = image_type = None
