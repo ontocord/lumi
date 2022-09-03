@@ -445,7 +445,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
         ent2score[element] = max(ent2score.get(element, 0), score)
 
     for element, score in ent2score.items():
-      if element not in l and score >= score_cutoff:
+      if element not in l and score >= score_cutoff and element not in all_aug_words:
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
           
     # create some qa from coordinates of elements     
