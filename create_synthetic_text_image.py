@@ -393,16 +393,18 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?|| {element}")] 
             background_element = element
             continue
+          x_center = (coord[0] + (coord[2] - coord[0])/2.0)  
+          y_center  = (coord[1] + (coord[3] - coord[1])/2.0)  
           if (coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25) and prev_small_element:
             prev_element, prev_score, prev_coord = prev_small_element
-            if coord[0] - prev_coord[0] > 25: 
+            if x_center   - (prev_coord[0] + (prev_coord[2] - prev_coord[0])/2.0) > 25: 
               if random.randint(0,1) == 0:
                 matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| left")] 
               else:         
                 matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?|| right")] 
               prev_small_element = None
               continue
-            elif coord[2] - prev_coord[2] > 25:  
+            elif y_center   - (prev_coord[1] + (prev_coord[3] - prev_coord[1])/2.0)> 25:  
               if random.randint(0,1) == 0:
                 matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?|| above")] 
               else:         
@@ -416,17 +418,17 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
               else:         
                 matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?|| in front")] 
               background_element= None
-            if coord[0] < 25:
+            if x_center  < 25:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| left")]
-            elif coord[0] > 75:
+            elif x_center > 75:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| right")]
-            elif coord[0] > 40 and coord[0] < 60 and coord[1] > 40 and coord[1] < 60:
+            elif x_center > 40 and x_center < 60 and y_center > 40 and y_center < 60:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| center")]
-            elif coord[1] < 25:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| above")] 
-            elif coord[1] > 75:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| below")]
-            if coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
+            elif y_center < 25:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| top")] 
+            elif y_center > 75:
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?|| bottom")]
+            if coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
             continue  
           
   # add some pre-created qa's
@@ -434,7 +436,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
     print ('implied entity score', entity, ent2score.get(entity,0))
     if ent2score.get(entity,0) >= score_cutoff:
       answer = question.split("||")[-1].strip()
-      if ent2score.get(answer,1) >= score_cutoff:
+      if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
           print ('implied answer score', answer, ent2score.get(answer,1))
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     elif " and " in entity: 
@@ -444,7 +446,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
         print ('implied entity2 score', entity2, ent2score.get(entity2,0))
         if (ent2score.get(entity1,0) >= score_cutoff) and (ent2score.get(entity2,0) >= score_cutoff):
           answer = question.split("||")[-1].strip()
-          if ent2score.get(answer,1) >= score_cutoff:
+          if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
         
       
