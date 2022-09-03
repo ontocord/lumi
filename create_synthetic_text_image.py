@@ -475,7 +475,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
               else:         
                 matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?||below")] 
               prev_small_element = None
-              continue            
+              continue              
           if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
             if  background_element:
               if random.randint(0,1) == 0:
@@ -489,11 +489,13 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||right")]
             elif x_center > 40 and x_center < 60 and y_center > 40 and y_center < 60:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||center")]
-            elif y_center < 25:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||top")] 
-            elif y_center > 75:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||bottom")]
             if coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
+            continue  
+          if y_center < 25:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||top")]
+            continue  
+          elif y_center > 75:
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||bottom")]
             continue  
           
   # add some pre-created qa's
