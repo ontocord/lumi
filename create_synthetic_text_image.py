@@ -61,7 +61,7 @@ sexual_orientation_lst_set = set(sexual_orientation_lst)
 political_affiliation_lst = ["conservative", "liberal", "moderate"]
 political_affiliation_lst_set = set(political_affiliation_lst)
 
-common_vlt5_words = ("true", "false", "yes", "no", "background", "foreground", "left", "right", "above", "below", "center", "in front", "behind", "nothing", "nowhere", "unknown", "black", "white", "more", "less", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )
+common_vlt5_words = ("true", "false", "yes", "no", "background", "foreground", "left", "right", "above", "below", "center", "middle", "in front", "behind", "nothing", "nowhere", "unknown", "black", "white", "more", "less", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )
 
 mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyllic", \
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
@@ -408,7 +408,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
       background_element = None
       prev_small_element = None
       for element, score, coord in box2element.values():
-        if score >= score_cutoff:
+        if score >= score_cutoff and not element.endswith("ed") and not element.endswith("ing"):
           if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
             matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?||{element}")] 
             background_element = element
