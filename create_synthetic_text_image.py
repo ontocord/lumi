@@ -268,7 +268,7 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
       #most_similar_idx = clip_output['scores'].sort().indices[-1]
       #sim1 = clip_output['scores'][most_similar_idx].item()
-      matched_output = {'matched_sentence': matched_sentence, 'element2img': dict([(a, b.item()) for a, b in zip(text4, clip_output['scores']]), 'box2element': clip_output['box2element'], \
+      matched_output = {'matched_sentence': matched_sentence, 'element2img': dict([(a, b.item()) for a, b in zip(text4, clip_output['scores'])]), 'box2element': clip_output['box2element'], \
                               'box_image_features': None if clip_output['box_image_features'] is None else clip_output['box_image_features'].cpu().numpy().tostring(),  \
                               'decomposed2element': clip_output['decomposed2element'], \
                               'decomposed_image_features': None if clip_output['decomposed_image_features'] is None else  clip_output['decomposed_image_features'].cpu().numpy().tostring(),\
