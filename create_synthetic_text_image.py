@@ -646,7 +646,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                     if items[-1][0] in distractors:
                        distractor_is_best_match = True
                 if not matched_output or  distractor_is_best_match or matched_output['score'] < score_cutoff or \
-                      (matched_output['decomposed2element'] and not any(a for a in matched_output['decomposed2element'].values() if a[1] >= score_cutoff)):
+                      (matched_output['decomposed2element'] and not any(a for a in matched_output['decomposed2element'].values() if a[1] >= score_cutoff)) or \
+                      (matched_output['box2element'] and not any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)):
                     #this is an undrawable sentence
                     matched_output = {}
                     matched_output['matched_sentence'] = matched_sentence
@@ -774,6 +775,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
                               matched_output2['score'] >= mult*score_cutoff and \
+                              (not matched_output['box2element'] or any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)) and \
                               len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
                             if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
                             if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
