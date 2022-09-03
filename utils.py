@@ -112,8 +112,8 @@ def load_json_like_from_str(s, **kwargs):
              ret[key] = Image.fromarray(ret[key])
       return ret
 
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, crop_add_factor=.55, decompose_image=False, normalized_boxes=None, ignore_from_crop=None):
-  if ignore_from_crop is None: ignore_from_crop = {}
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.55, decompose_image=False, normalized_boxes=None, ignore_from_box=None):
+  if ignore_from_box is None: ignore_from_box = {}
   p = next(clip_model.parameters())
   decomposed_image_features = None 
   if type(image) is np.array:
@@ -128,11 +128,11 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
     for x1,y1,x2,y2 in normalized_boxes:
       l = ((x2-x1) + (y2-y1))/2.0
       if l < 0.20: continue
-      cropped_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x2)*shape[0]), int((y2)*shape[1])]
-      coords.append(cropped_img_coord)
-      cropped_PIL_img = pil_image.crop(cropped_img_coord)
-      imgs.append(np.array(cropped_PIL_img))
-      #display(cropped_PIL_img)  
+      box_img_coord = [int(x1*shape[0]), int(y1*shape[1]), int((x2)*shape[0]), int((y2)*shape[1])]
+      coords.append(box_img_coord)
+      box_PIL_img = pil_image.box(box_img_coord)
+      imgs.append(np.array(box_PIL_img))
+      #display(box_PIL_img)  
   else:
     imgs = [image] 
     coords = [[0,0,1,1]]
@@ -145,7 +145,7 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       if decompose_image:
         o = (clip_vision_output["last_hidden_state"][0,1:,:] + cls_weight*10*clip_vision_output["last_hidden_state"][0,0,:])/(cls_weight*10+1)
         clip_vision_output.decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
-      # image_features[0] is the main picture, the rest are the cropped parts of the picture
+      # image_features[0] is the main picture, the rest are the box parts of the picture
       clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
   image_features = clip_vision_output.image_features
   if hasattr(clip_vision_output, 'decomposed_image_features'):
@@ -159,39 +159,39 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
      return None
   scores =  cosine_similarity(image_features[0].unsqueeze(0), text_features, dim=1)
   if len(imgs) > 1:
-    cropped_scores_topk = []
-    cropped_scores = []
-    cropped_image_features = image_features[1:]
+    box_scores_topk = []
+    box_scores = []
+    box_image_features = image_features[1:]
     #print (scores)
-    #print ('cropped_image_features.shape', cropped_image_features.shape)
+    #print ('box_image_features.shape', box_image_features.shape)
     text_array2 = []
     for cidx, tfeat in enumerate(text_features):
-      if text_array[cidx] in ignore_from_crop: continue
+      if text_array[cidx] in ignore_from_box: continue
       text_array2.append(text_array[cidx])
-      scores2 =  min (1.0, (scores[cidx] + crop_add_factor)) * cosine_similarity(cropped_image_features, tfeat.unsqueeze(0), dim=1)
-      cropped_scores_topk.append(scores2.topk(k=min(len(text_array), cropped_image_features.shape[0])))
-      cropped_scores.append(cropped_scores_topk[-1].values[0])
-    if cropped_scores:
-     cropped2text = {}
-     cropped_scores = torch.stack(cropped_scores)
-     cindices = cropped_scores.sort().indices.tolist()
+      scores2 =  min (1.0, (scores[cidx] + box_add_factor)) * cosine_similarity(box_image_features, tfeat.unsqueeze(0), dim=1)
+      box_scores_topk.append(scores2.topk(k=min(len(text_array), box_image_features.shape[0])))
+      box_scores.append(box_scores_topk[-1].values[0])
+    if box_scores:
+     box2element = {}
+     box_scores = torch.stack(box_scores)
+     cindices = box_scores.sort().indices.tolist()
      cindices.reverse()
      for cidx in cindices:
-       text, topk = text_array2[cidx], cropped_scores_topk[cidx]
+       text, topk = text_array2[cidx], box_scores_topk[cidx]
        for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
-         if idx not in cropped2text: 
-           cropped2text[idx] = (text, score, coords[idx])
+         if idx not in box2element: 
+           box2element[idx] = (text, score, coords[idx])
            break
     else:
-     cropped2text = None
-     cropped_scores_topk = None
-     cropped_scores = None
-     cropped_image_features  = None
+     box2element = None
+     box_scores_topk = None
+     box_scores = None
+     box_image_features  = None
   else:
-    cropped2text = None
-    cropped_scores_topk = None
-    cropped_scores = None
-    cropped_image_features  = None
+    box2element = None
+    box_scores_topk = None
+    box_scores = None
+    box_image_features  = None
 
   if decompose_image:
     decomposed_scores_topk = []
@@ -200,24 +200,24 @@ def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array,
       scores2 =  cosine_similarity(decomposed_image_features.squeeze(0), tfeat.unsqueeze(0), dim=1)
       decomposed_scores_topk.append(scores2.topk(k=min(len(text_array), decomposed_image_features.shape[1])))
       decomposed_scores.append(decomposed_scores_topk[-1].values[0])
-    decomposed2text = {}
+    decomposed2element = {}
     decomposed_scores = torch.stack(decomposed_scores)
     cindices = decomposed_scores.sort().indices.tolist()
     cindices.reverse()
     for cidx in cindices:
       text, topk = text_array[cidx], decomposed_scores_topk[cidx]
       for idx, score in zip(topk.indices.tolist(), topk.values.tolist()):
-        if idx not in decomposed2text: 
-          decomposed2text[idx] = (text, score)
+        if idx not in decomposed2element: 
+          decomposed2element[idx] = (text, score)
           break
   else:
-    decomposed2text = None
+    decomposed2element = None
     decomposed_scores_topk = None 
     decomposed_scores = None
   
-  return {'image': image, 'cropped_images': imgs[1:], 'image_features': image_features[0].unsqueeze(0),  \
-           'normalized_boxes': normalized_boxes, 'coords': coords, 'cropped_image_features': cropped_image_features, 'cropped2text': cropped2text, \
-           'decomposed_image_features': decomposed_image_features, 'decomposed2text': decomposed2text, \
+  return {'image': image, 'box_images': imgs[1:], 'image_features': image_features[0].unsqueeze(0),  \
+           'normalized_boxes': normalized_boxes, 'coords': coords, 'box_image_features': box_image_features, 'box2element': box2element, \
+           'decomposed_image_features': decomposed_image_features, 'decomposed2element': decomposed2element, \
            'scores': scores, 'decomposed_scores': decomposed_scores, 'decomposed_scores_topk': decomposed_scores_topk, \
            'clip_vision_output': clip_vision_output, 'text_features': text_features}
 
