@@ -306,7 +306,7 @@ def create_qa_from_vlt5(l, img,  aug2ent, max_qa=10, potential_qa_list=None):
     elements.sort(key=lambda a: len(a), reverse=True)
     description = ""
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
-    if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+    if answer not in l and answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
       description = answer
       potential_qa_list.append((answer, f"what is in this picture?||{answer}"))
       elements = [description] + elements
