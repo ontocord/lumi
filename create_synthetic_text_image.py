@@ -845,7 +845,7 @@ if __name__ == "__main__":
                                      max_items=args.max_items, \
                                      score_cutoff=args.score_cutoff, \
                                      max_img_per_doc=args.max_img_per_doc, \
-                                     trimmed_text_word_len=args.trimmed_text_word_len, box_add_factor=args.box_add_factor \
+                                     trimmed_text_word_len=args.trimmed_text_word_len, box_add_factor=args.box_add_factor, \
                                      verbose=args.verbose, high_score_mult=args.high_score_mult, \
                                      pytorch_device=args.pytorch_device)
  
