@@ -635,7 +635,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
                 print ('implied entities', implied_entities)
                 # now find the entities and important verbs in the most similar sentence.
-                matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
+                matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, ignore_from_box=distractors, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                 distractors= set(distractors)
                 distractor_is_best_match = False
                 if matched_output:
@@ -760,7 +760,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           implied_entities = list(set(implied_entities)) 
                           print ('implied entities', implied_entities)
                           potential_qa_list = potential_qa_list + qa_list_gen
-                          matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
+                          matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, ignore_from_box=distractors, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                           distractors = set(distractors)
                           distractor_is_best_match = False
                           if matched_output2:
