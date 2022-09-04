@@ -259,12 +259,11 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
-  verbs = [(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
+  verbs = [strip_left_stopwords(e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
           [a for a in noun_chunks if a.endswith("ed") or a.endswith("ing")]
+  ents = [strip_left_stopwords(e.text) for e in doc.ents if len(e.text) > 4 and e.text.lower() not in stopwords_set]
   noun_chunks = [a for a in noun_chunks if not a.endswith("ed") and not a.endswith("ing")]
-  ner_and_verbs = dict([(strip_left_stopwords(e.text.lower() if len(e.text) < 5 else e.text.lower()[:5]), e.text) for e in doc.ents if len(e.text) > 4] + \
-                           verbs + \
-                           [(e.lower() if len(e) < 5 else e.lower()[:5], e) for e in noun_chunks ]) 
+  ner_and_verbs = dict([((e.lower() if len(e) < 5 else e.lower()[:5]), e)  for e in (ents + verbs + noun_chunks])
   text4 = list(set([a.strip("()[]0123456789-:,.+? ") for a in (list(ner_and_verbs.values()) + other_element_arr) if a.strip()]))
   text4 = [a for a in text4 if a.strip()]
   if False: #to get ony longest subsuming text
