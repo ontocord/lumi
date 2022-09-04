@@ -304,7 +304,8 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
         if len(answer) > 15: continue
         question = question.replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
-        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        noun_chunks = [strip_left_stopwords(e.text).strip() for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        noun_chunks = [e for e in noun_chunks if e.strip()]
         new_noun_chunks = [e for e in noun_chunks if e not in text]
         if answer and noun_chunks and (answer not in text or new_noun_chunks):
           if answer not in text:
