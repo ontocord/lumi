@@ -255,7 +255,7 @@ def strip_left_stopwords(e_text):
   return " ".join(e_text2)
 
 #given a sentence, break the sentence up into elements (ner, verbs, etc.) and match against the img, in the aggregate as well as against boxes
-def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, min_num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
+def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
@@ -276,7 +276,6 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
     text4 = text5 
   if text4:
     if get_box_images:
-      num_boxes = max(min_num_boxes, int(len(text4)/2))
       normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
       
       clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)  
