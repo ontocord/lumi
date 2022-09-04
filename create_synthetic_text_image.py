@@ -306,11 +306,17 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
         doc = spacy_nlp(question)
         noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
         new_noun_chunks = [e for e in noun_chunks if e not in text]
-        if answer not in text or new_noun_chunks:
+        if answer and noun_chunks and (answer not in text or new_noun_chunks):
           if answer not in text:
-            element = noun_chunks[0]
+            if len(noun_chunks) > 1:
+              element = noun_chunks[0] + " and " + noun_chunks[1]
+            else:
+              element = noun_chunks[0]
           else:
-            element = new_noun_chunks[0]
+            if len(new_noun_chunks) > 1:
+              element = new_noun_chunks[0] + " and " + noun_chunks[1]
+            else:
+              element = new_noun_chunks[0]
           potential_qa_list.append((element, question+"||"+answer))
           print ('found qa', (element, question+"||"+answer))
 
