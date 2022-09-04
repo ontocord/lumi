@@ -300,6 +300,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
       for aHash in qa_for_sent:
         question, answer = aHash['question'], aHash['answer']
         answer = strip_left_stopwords(answer)
+        answer = answer.replace("'s",  " 's").replace("  ", " ")
         if len(answer) > 15: continue
         question = question.replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
