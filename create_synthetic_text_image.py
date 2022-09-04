@@ -294,19 +294,19 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       return matched_output, clip_output['box_images']
   return None, None    
 
-def create_potential_qa(l, img,  aug2ent):
+def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
     potential_qa_list = []
-    for qa_for_sent in qg(l):
+    for qa_for_sent in qg((prev_text+". " if prev_text else "") + text + (". " + next_text if next_text else "")):
       for aHash in qa_for_sent:
         question, answer = aHash['question'], aHash['answer']
         answer = strip_left_stopwords(answer)
         if len(answer) > 15: continue
-        question = question.strip("?").replace("'s",  " 's").replace("  ", " ")
+        question = question.replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
         noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
         new_noun_chunks = [e for e in noun_chunks if e not in l]
-        if answer not in l or new_noun_chunks:
-          if answer not in l:
+        if answer not in text or new_noun_chunks:
+          if answer not in text:
             element = noun_chunks[0]
           else:
             element = new_noun_chunks[0]
@@ -314,15 +314,15 @@ def create_potential_qa(l, img,  aug2ent):
           print ('found qa', (element, question+"||"+answer))
 
     prev_element = "" 
-    if " woman " in l:
+    if " woman " in text:
       person = "woman"
-    elif " girl " in l:
+    elif " girl " in text:
       person = "girl"
-    elif " boy " in l:
+    elif " boy " in text:
       person = "boy"
-    elif " man " in l:
+    elif " man " in text:
       person = "man"
-    elif " person " in l:
+    elif " person " in text:
       person = "person"
     else:
       person = ""
@@ -340,19 +340,18 @@ def create_potential_qa(l, img,  aug2ent):
           if answer == "5": answer = "five people"  
           potential_qa_list.append((person, f"how many people are in this picture?||{answer}"))
           
-          
     entity_to_qa = 0    
     elements = list(aug2ent.values())
     elements.sort(key=lambda a: len(a), reverse=True)
     description = ""
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
-    if answer not in l and answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
+    if answer not in text and answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
       description = answer
       potential_qa_list.append((answer, f"what is in this picture?||{answer}"))
       elements = [description] + elements
     answer2qa = {}
     for element in elements:
-        if element != description and element not in l: continue
+        if element != description and element not in text: continue
         color = [a for a in element.split() if a in color_adj_set]
         shape = [a for a in element.split() if a in shape_adj_set]
         if element == description:
@@ -452,7 +451,7 @@ def create_potential_qa(l, img,  aug2ent):
                     
 def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
   global vlt5, vlt5_tokenizer
-  l = matched_output["matched_sentence"]
+  text = matched_output["matched_sentence"]
   ent2score = {}
   if True:
     decomposed2element = matched_output.get('decomposed2element', {})
@@ -464,10 +463,6 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
       for element, score, coord in box2element.values():
         ent2score[element] = max(ent2score.get(element, 0), score)
 
-    for element, score in ent2score.items():
-      if element not in l and score >= score_cutoff and element not in all_aug_words:
-         matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
-          
     # create some qa from coordinates of elements     
     if box2element:
       background_element = None
@@ -535,7 +530,13 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           answer = question.split("||")[-1].strip()
           if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
-        
+    
+    # add qa for any other entities
+    ents = [a[1].split("||")[-1] for a in matched_output['qa']]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output['qa']]))
+    for element, score in ent2score.items():
+      if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
+         matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
+                  
   matched_output['qa'] = list(set(matched_output.get('qa',[]))) 
   
 #saves away a json of from {'matched_sentence': <str>, 'score': <float>, ...
@@ -697,7 +698,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 # create some distractor phrases
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
-                potential_qa_list = create_potential_qa((prev_text + ". " + matched_sentence + ". " + next_text).replace("  ", " ").strip(), img,  aug2ent)
+                potential_qa_list = create_potential_qa(matched_sentence, img,  aug2ent, prev_text=prev_text, next_text=next_text)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                 implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
