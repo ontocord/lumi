@@ -26,7 +26,8 @@ import tqdm
 import numpy
 import sys, os
 import argparse
-
+from lumi import qgen_pipeline 
+  
 
 try:
   if minidalle is None:
@@ -84,8 +85,10 @@ all_aug_words = set(all_aug_words)
 stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including"])
     
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
-  global minidalle, spacy_nlp, clip_model, clip_processor, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer
+  global minidalle, spacy_nlp, clip_model, clip_processor, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer, qg
   device = pytorch_device
+  qg = qgen_pipeline.pipeline("multitask-qa-qg", device="cuda")
+
   if vlt5_data_file and vlt5_data is None:
       vlt5_data = torch.load(vlt5_data_file)
   if minidalle is None: 
@@ -291,8 +294,20 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       return matched_output, clip_output['box_images']
   return None, None    
 
-def create_potential_qa_from_vlt5(l, img,  aug2ent):
+def create_potential_qa(l, img,  aug2ent):
     potential_qa_list = []
+    for qa_for_sent in qg(l):
+      for aHash in qa_for_sent:
+        question, answer = aHash['question'], aHash['answer']
+        question_arr = question.strip("?").replace("'s",  " 's").replace("  ", " ").split()
+        question_arr = [a for a in question_arr if not a.endswith("ed")]
+        question_arr = strip_left_stopwords(" ".join(question_arr)).split()
+        question_arr.reverse()
+        question_arr = strip_left_stopwords(" ".join(question_arr)).split()
+        question_arr.reverse()
+        element = " ".join(question_arr)
+        potential_qa_list.append((element, question+"||"+answer))
+
     prev_element = "" 
     if " woman " in l:
       person = "woman"
@@ -677,7 +692,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 # create some distractor phrases
                 distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
-                potential_qa_list = create_potential_qa_from_vlt5((prev_text + " " + matched_sentence + " " + next_text).replace("  ", " ").strip(), img,  aug2ent)
+                potential_qa_list = create_potential_qa((prev_text + ". " + matched_sentence + ". " + next_text).replace("  ", " ").strip(), img,  aug2ent)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                 implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
@@ -791,7 +806,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                           generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
                           distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
-                          potential_qa_list = create_potential_qa_from_vlt5(generated_sentence, img,  aug2ent_gen) + qa_list_gen
+                          potential_qa_list = create_potential_qa(generated_sentence, img,  aug2ent_gen) + qa_list_gen
                           implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                           implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
                           prefix_arr = []
