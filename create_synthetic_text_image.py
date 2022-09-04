@@ -319,7 +319,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
             else:
               element = new_noun_chunks[0]
           potential_qa_list.append((element, question+"||"+answer))
-          print ('found qa', (element, question+"||"+answer))
+          #print ('found qa', (element, question+"||"+answer))
 
     prev_element = "" 
     if " woman " in text:
@@ -523,17 +523,17 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           
   # add some pre-created qa's
   for entity, question in potential_qa_list:
-    print ('implied entity score', entity, ent2score.get(entity,0))
+    #print ('implied entity score', entity, ent2score.get(entity,0))
     if ent2score.get(entity,0) >= score_cutoff:
       answer = question.split("||")[-1].strip()
       if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
-          print ('implied answer score', answer, ent2score.get(answer,1))
+          #print ('implied answer score', answer, ent2score.get(answer,1))
           matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     elif " and " in entity: 
         entity1, entity2 = entity.split(" and ", 1)
         entity1, entity2 = entity1.strip(), entity2.strip()
-        print ('implied entity1 score', entity1, ent2score.get(entity1,0))
-        print ('implied entity2 score', entity2, ent2score.get(entity2,0))
+        #print ('implied entity1 score', entity1, ent2score.get(entity1,0))
+        #print ('implied entity2 score', entity2, ent2score.get(entity2,0))
         if (ent2score.get(entity1,0) >= score_cutoff) and (ent2score.get(entity2,0) >= score_cutoff):
           answer = question.split("||")[-1].strip()
           if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
@@ -710,7 +710,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 potential_qa_list = list(set(potential_qa_list + qa_list))
                 implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                 implied_entities = list(set([a for a in implied_entities if a not in matched_sentence and a not in color_adj_set and a not in common_vlt5_words]))
-                print ('implied entities', implied_entities)
+                #print ('implied entities', implied_entities)
                 # now find the entities and important verbs in the most similar sentence.
                 matched_output, box_images = get_element_to_img(matched_sentence, img, get_box_images=True, ignore_from_box=distractors, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                 distractors= set(distractors)
@@ -834,7 +834,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             if word not in generated_sentence:
                               implied_entities.append(word)
                           implied_entities = list(set(implied_entities)) 
-                          print ('implied entities', implied_entities)
+                          #print ('implied entities', implied_entities)
                           potential_qa_list = potential_qa_list + qa_list_gen
                           matched_output2, box_images = get_element_to_img(generated_sentence, img, get_box_images=True, ignore_from_box=distractors, other_element_arr=distractors + implied_entities, box_add_factor=box_add_factor)
                           distractors = set(distractors)
@@ -861,8 +861,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                     else:
                                       mood_type = matched_prefix[0]
                                       image_type = matched_prefix[1]
-                            if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
-                            if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
+                            #if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
+                            #if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
                             if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                             if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                             if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
