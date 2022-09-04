@@ -341,7 +341,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
 
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many people are in this picture?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-          if answer == "1": answer = "one person"
+          if answer in ("0", "1"): answer = "one person"
           if answer == "2": answer = "two people"
           if answer == "3": answer = "three people"
           if answer == "4": answer = "four people"
@@ -399,7 +399,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
         if element.lower() == element and len(element) <= 5:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many {element} are in this picture?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              if answer == "1": answer = f"one {element}"
+              if answer in ("1", "0"): answer = f"one {element}"
               if answer == "2": answer = f"two {element}"
               if answer == "3": answer = f"three {element}"
               if answer == "4": answer = f"four {element}"
