@@ -82,7 +82,7 @@ image_type_lst = ["rendering", "vector-art ", "scene", "movie-still", \
                       "textbook-illustration", "realistic-drawing", "sketch", "cartoon", "painting"]
 all_aug_words.extend(image_type_lst)                      
 all_aug_words = set(all_aug_words)
-stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including"])
+stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including", "comprising", "comprises"])
     
 def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
   global minidalle, spacy_nlp, clip_model, clip_processor, vlt5, vlt5_data, device, vlt5_tokenizer, commongen_model, commongen_tokenizer, qg
