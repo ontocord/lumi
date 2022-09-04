@@ -305,7 +305,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
         question = question.replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
         noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
-        new_noun_chunks = [e for e in noun_chunks if e not in l]
+        new_noun_chunks = [e for e in noun_chunks if e not in text]
         if answer not in text or new_noun_chunks:
           if answer not in text:
             element = noun_chunks[0]
@@ -533,7 +533,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     
     # add qa for any other entities
-    ents = [a[1].split("||")[-1] for a in matched_output['qa']]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output['qa']]))
+    ents = [a[1].split("||")[-1] for a in matched_output.get('qa',[])]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output.get('qa',[])]))
     for element, score in ent2score.items():
       if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is in this picture?||{element}")] 
