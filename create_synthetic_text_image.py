@@ -303,10 +303,15 @@ def create_potential_qa(l, img,  aug2ent):
         if len(answer) > 15: continue
         question = question.strip("?").replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
-        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if e.text not in l and len(e.text) > 4 and e.text.lower() not in stopwords_set]
-        if noun_chunks:
-          element = noun_chunks[0]
+        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        new_noun_chunks = [e for e in noun_chunks if e not in l]
+        if answer not in l or new_noun_chunks:
+          if answer not in l:
+            element = noun_chunks[0]
+          else:
+            element = new_noun_chunks[0]
           potential_qa_list.append((element, question+"||"+answer))
+          print ('found qa', (element, question+"||"+answer))
 
     prev_element = "" 
     if " woman " in l:
@@ -703,11 +708,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 distractor_is_best_match = False
                 if matched_output:
                   matched_output['score'] = sim1
-                if matched_output and matched_output['decomposed2element']:
-                    items = list(matched_output['decomposed2element'].values())
-                    items.sort(key=lambda a: a[1])
-                    if items[-1][0] in distractors:
-                       distractor_is_best_match = True
+                distractor_is_best_match = matched_output and matched_output['decomposed2element'] and any(a for a in matched_output['decomposed2element'].values() if a[0] in distractors and a[1] >= score_cutoff*high_score_mult)                                   
                 if not matched_output or  distractor_is_best_match or matched_output['score'] < score_cutoff or \
                       (matched_output['decomposed2element'] and not any(a for a in matched_output['decomposed2element'].values() if a[1] >= score_cutoff)) or \
                       (matched_output['box2element'] and not any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)):
@@ -829,12 +830,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           distractor_is_best_match = False
                           if matched_output2:
                               matched_output2['score'] = sim2
-                          if matched_output2 and matched_output2['decomposed2element'] and matched_output2['box2element']:
-                              items = list(matched_output2['decomposed2element'].values())
-                              items.sort(key=lambda a: a[1])
-                              if items[-1][0] in distractors:
-                                distractor_is_best_match = True
-                                print ('distractor 1', items)
+                          distractor_is_best_match = matched_output2 and matched_output2['decomposed2element'] and any(a for a in matched_output2['decomposed2element'].values() if a[0] in distractors and a[1] >= score_cutoff*high_score_mult)                                   
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
                               matched_output2['score'] >= mult*score_cutoff and \
