@@ -299,7 +299,11 @@ def create_potential_qa(l, img,  aug2ent):
     for qa_for_sent in qg(l):
       for aHash in qa_for_sent:
         question, answer = aHash['question'], aHash['answer']
-        question_arr = question.strip("?").replace("'s",  " 's").replace("  ", " ").split()
+        question = question.strip("?").replace("'s",  " 's").replace("  ", " ")
+        doc = spacy_nlp(question)
+        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        print (noun_chunks, question)
+        question _arr= question.split()
         question_arr = [a for a in question_arr if not a.endswith("ed")]
         question_arr = strip_left_stopwords(" ".join(question_arr)).split()
         question_arr.reverse()
