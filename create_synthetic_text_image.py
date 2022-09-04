@@ -767,6 +767,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                         if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                         generated_sentence = generated_sentence.strip()
+                        if "teddy" or "teddy bear" in generated_sentence and "teddy" not in word_str:
+                          generated_sentence = generated_sentence.replace("teddy bear", "object").replace("teddy", "object")
                         l_lower = generated_sentence.lower()
                         if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
                         if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
