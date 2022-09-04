@@ -303,7 +303,7 @@ def create_potential_qa(l, img,  aug2ent):
         if len(answer) > 15: continue
         question = question.strip("?").replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
-        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if e,text not in l and len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if e.text not in l and len(e.text) > 4 and e.text.lower() not in stopwords_set]
         if noun_chunks:
           element = noun_chunks[0]
           potential_qa_list.append((element, question+"||"+answer))
