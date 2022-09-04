@@ -299,18 +299,14 @@ def create_potential_qa(l, img,  aug2ent):
     for qa_for_sent in qg(l):
       for aHash in qa_for_sent:
         question, answer = aHash['question'], aHash['answer']
+        answer = strip_left_stopwords(answer)
+        if len(answer) > 15: continue
         question = question.strip("?").replace("'s",  " 's").replace("  ", " ")
         doc = spacy_nlp(question)
-        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
-        print (noun_chunks, question)
-        question_arr= question.split()
-        question_arr = [a for a in question_arr if not a.endswith("ed")]
-        question_arr = strip_left_stopwords(" ".join(question_arr)).split()
-        question_arr.reverse()
-        question_arr = strip_left_stopwords(" ".join(question_arr)).split()
-        question_arr.reverse()
-        element = " ".join(question_arr)
-        potential_qa_list.append((element, question+"||"+answer))
+        noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if e,text not in l and len(e.text) > 4 and e.text.lower() not in stopwords_set]
+        if noun_chunks:
+          element = noun_chunks[0]
+          potential_qa_list.append((element, question+"||"+answer))
 
     prev_element = "" 
     if " woman " in l:
