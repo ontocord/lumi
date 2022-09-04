@@ -169,16 +169,16 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
       the_person =  " ".join(aug_word.split()[-2:])
       if the_person not in person_lst_set: the_person = "person"
       emotion = [a for a in aug_word.split() if a in emotion_adj_set]
-      if emotion: qa_list.append((the_person, f"what is {the_person} feeling?||{emotion[0]}"))
+      if emotion: qa_list.append((the_person, f"What is {the_person} feeling?||{emotion[0]}"))
       age = [a for a in aug_word.split() if a in age_adj_set]
-      if age: qa_list.append((the_person, f"how old is {the_person}?||{age[0]}"))
+      if age: qa_list.append((the_person, f"How old is {the_person}?||{age[0]}"))
       the_person = the_person.split()[-1]
       religion = [a for a in aug_word.split() if a in religion_lst_set]
-      if religion: qa_list.append((the_person, f"what religion is {the_person}?||{religion[0]}"))
+      if religion: qa_list.append((the_person, f"What religion is {the_person}?||{religion[0]}"))
       race = [a for a in aug_word.split() if a in race_lst_set]
-      if race: qa_list.append((the_person, f"what race is {the_person}?||{race[0]}"))
+      if race: qa_list.append((the_person, f"What race is {the_person}?||{race[0]}"))
       if "person" not in the_person:
-        qa_list.append((the_person, f"what gender is the person?||{the_person}"))
+        qa_list.append((the_person, f"What gender is the person?||{the_person}"))
         
   qa_list = []
   aug2ent =  {}
@@ -201,9 +201,9 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         aug_word =   aug_loc(e_text)
         thing = " ".join(aug_word.split()[-2:])
         color = [a for a in aug_word.split() if a in color_adj_set]
-        if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
+        if color: qa_list.append((thing, f"What color is {thing}?||{color[0]}"))
         shape = [a for a in aug_word.split() if a in shape_adj_set]
-        if shape: qa_list.append((thing, f"what shape is {thing}?||{shape[0]}"))
+        if shape: qa_list.append((thing, f"What shape is {thing}?||{shape[0]}"))
     elif e_label in ('PERSON',) and do_person:
         aug_word =  aug_person(e_text, random.randint(0,1))
         get_person_questions(aug_word, qa_list)        
@@ -211,10 +211,10 @@ def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=
         aug_word =  aug_obj(e_text)
         thing =  " ".join(aug_word.split()[1:])
         color = [a for a in aug_word.split() if a in color_adj_set]
-        if color: qa_list.append((thing, f"what color is {thing}?||{color[0]}"))
+        if color: qa_list.append((thing, f"What color is {thing}?||{color[0]}"))
     elif e_label in ('EVENT',) and do_obj:
        aug_word = e_text
-       qa_list.append((e_text, f"where is this picture?||{e_text}"))
+       qa_list.append((e_text, f"Where is this picture?||{e_text}"))
     else:
         aug_word = e_text
     l = l.replace(e_text, aug_word,1)
@@ -330,7 +330,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
     if person:
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is the {person} feeling?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-          potential_qa_list.append((person, f"what is {person} feeling?||{answer}"))
+          potential_qa_list.append((person, f"What is {person} feeling?||{answer}"))
 
         answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many people are in this picture?",  img)["text"]
         if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
@@ -339,7 +339,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
           if answer == "3": answer = "three people"
           if answer == "4": answer = "four people"
           if answer == "5": answer = "five people"  
-          potential_qa_list.append((person, f"how many people are in this picture?||{answer}"))
+          potential_qa_list.append((person, f"How many people are in this picture?||{answer}"))
           
     entity_to_qa = 0    
     elements = list(aug2ent.values())
@@ -348,7 +348,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
     answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is in this picture?",  img)["text"]
     if answer not in text and answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
       description = answer
-      potential_qa_list.append((answer, f"what is in this picture?||{answer}"))
+      potential_qa_list.append((answer, f"What is in this picture?||{answer}"))
       elements = [description] + elements
     answer2qa = {}
     for element in elements:
@@ -358,11 +358,11 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
         if element == description:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              potential_qa_list.append((element, f"where is {element}?||{answer}"))
+              potential_qa_list.append((element, f"Where is {element}?||{answer}"))
               entity_to_qa +=1
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
+              potential_qa_list.append((element, f"What is {element} doing?||{answer}"))
               entity_to_qa +=1
               if answer.endswith("ing"):
                 if random.randint(0,1) == 0:
@@ -370,24 +370,24 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
                   prep = random.choice(['with','from','to','at','in'])
                   answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                   if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                      potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                      potential_qa_list.append((element + ' and ' + act, f"What is {element} {act} {prep}?||{answer}"))
                       entity_to_qa +=1
                 else:
                   act = answer
                   prep = random.choice(['with','from','to','at','in'])
                   answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} {act}?",  img)["text"]
                   if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                      potential_qa_list.append((element + ' and ' + act, f"why is {element} {act}?||{answer}"))
+                      potential_qa_list.append((element + ' and ' + act, f"Why is {element} {act}?||{answer}"))
                       entity_to_qa +=1
         if shape: 
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what shape is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in ("nothing", "nowhere", "unknown", "black", "white")): 
-              potential_qa_list.append((element, f"what shape is {element}?||{answer}"))
+              potential_qa_list.append((element, f"What shape is {element}?||{answer}"))
               entity_to_qa +=1
         if color: 
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what color is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              potential_qa_list.append((element, f"what color is {element}?||{answer}"))
+              potential_qa_list.append((element, f"What color is {element}?||{answer}"))
               entity_to_qa +=1
         if element.lower() == element and len(element) <= 5:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many {element} are in this picture?",  img)["text"]
@@ -397,12 +397,12 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
               if answer == "3": answer = f"three {element}"
               if answer == "4": answer = f"four {element}"
               if answer == "5": answer = f"five {element}"
-              potential_qa_list.append((element, f"how many {element} are in this picture?||{answer}"))
+              potential_qa_list.append((element, f"How many {element} are in this picture?||{answer}"))
               entity_to_qa +=1
         if (element.endswith("ed") or element.endswith("ing") or element.endswith("s")):
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} doing?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              potential_qa_list.append((element, f"what is {element} doing?||{answer}"))
+              potential_qa_list.append((element, f"What is {element} doing?||{answer}"))
               entity_to_qa +=1
               if answer.endswith("ing"):
                 if random.randint(0,1) == 0:
@@ -410,42 +410,42 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
                   prep = random.choice(['with','from','to','at','in'])
                   answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} {act} {prep}?",  img)["text"]
                   if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                      potential_qa_list.append((element + ' and ' + act, f"what is {element} {act} {prep}?||{answer}"))
+                      potential_qa_list.append((element + ' and ' + act, f"What is {element} {act} {prep}?||{answer}"))
                       entity_to_qa +=1
                 else:
                   act = answer
                   prep = random.choice(['with','from','to','at','in'])
                   answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: why is {element} {act}?",  img)["text"]
                   if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                      potential_qa_list.append((element + ' and ' + act, f"why is {element} {act}?||{answer}"))
+                      potential_qa_list.append((element + ' and ' + act, f"Why is {element} {act}?||{answer}"))
                       entity_to_qa +=1
         if random.randint(0,1) == 0:
           if  element.endswith("ing"):
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                potential_qa_list.append((element, f"what is {element}?||{answer}"))
+                potential_qa_list.append((element, f"What is {element}?||{answer}"))
                 entity_to_qa +=1
           else:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: what is {element} for?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                potential_qa_list.append((element, f"what is {element} for?||{answer}"))
+                potential_qa_list.append((element, f"What is {element} for?||{answer}"))
                 entity_to_qa +=1
         if random.randint(0,1) == 0 and prev_element:
           if random.randint(0,1) == 0:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                potential_qa_list.append((element+' and '+ prev_element, f"where is {element} and {prev_element}?||{answer}"))
+                potential_qa_list.append((element+' and '+ prev_element, f"Where is {element} and {prev_element}?||{answer}"))
                 entity_to_qa +=1
           else:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: are there more or less {element} then {prev_element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-                potential_qa_list.append((element+' and '+ prev_element, f"are there more or less {element} then {prev_element}?||{answer}"))
+                potential_qa_list.append((element+' and '+ prev_element, f"Are there more or less {element} then {prev_element}?||{answer}"))
                 entity_to_qa +=1
             
         if random.randint(0,1) == 0:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element}?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
-              potential_qa_list.append((element, f"where is {element}?||{answer}"))
+              potential_qa_list.append((element, f"Where is {element}?||{answer}"))
               entity_to_qa +=1            
         prev_element = element
     return list(set(potential_qa_list))
@@ -471,7 +471,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
       for element, score, coord in box2element.values():
         if score >= score_cutoff and not element.endswith("ed") and not element.endswith("ing"):
           if coord[0] <= 15 and coord[1] <= 15 and  coord[2] >= 85 and coord[3] >= 40:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in the background?||{element}")] 
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is in the background?||{element}")] 
             background_element = element
             continue
           x_center = (coord[0] + (coord[2] - coord[0])/2.0)  
@@ -480,38 +480,38 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
             prev_element, prev_score, prev_coord = prev_small_element
             if x_center   - (prev_coord[0] + (prev_coord[2] - prev_coord[0])/2.0) > 25: 
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?||left")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"Where is {prev_element} in relation to {element}?||left")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?||right")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"Where is {element} in relation to {prev_element}?||right")] 
               prev_small_element = None
               continue
             elif y_center   - (prev_coord[1] + (prev_coord[3] - prev_coord[1])/2.0)> 25:  
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {prev_element} in relation to {element}?||above")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"Where is {prev_element} in relation to {element}?||above")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"where is {element} in relation to {prev_element}?||below")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ prev_element, f"Where is {element} in relation to {prev_element}?||below")] 
               prev_small_element = None
               continue              
           if (coord[2] - coord[0] <= 50 or coord[3] - coord[1] <= 50):
             if  background_element:
               if random.randint(0,1) == 0:
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {background_element} in relation to {element}?||behind")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"Where is {background_element} in relation to {element}?||behind")] 
               else:         
-                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"where is {element} in relation to {background_element}?||in front")] 
+                matched_output['qa'] = matched_output.get('qa',[]) +  [(element +" and "+ background_element, f"Where is {element} in relation to {background_element}?||in front")] 
               background_element= None
             if x_center  < 25:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||left")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"Where is {element}?||left")]
             elif x_center > 75:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||right")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"Where is {element}?||right")]
             elif x_center > 40 and x_center < 60 and y_center > 40 and y_center < 60:
-              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||center")]
+              matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"Where is {element}?||center")]
             if coord[2] - coord[0] <= 25 or coord[3] - coord[1] <= 25: prev_small_element = (element, score, coord)
             continue  
           if y_center < 25:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||top")]
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"Where is {element}?||top")]
             continue  
           elif y_center > 75:
-            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"where is {element}?||bottom")]
+            matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"Where is {element}?||bottom")]
             continue  
           
   # add some pre-created qa's
@@ -536,7 +536,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
     ents = [a[1].split("||")[-1] for a in matched_output['qa']]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output['qa']]))
     for element, score in ent2score.items():
       if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
-         matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"what is in this picture?||{element}")] 
+         matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is in this picture?||{element}")] 
                   
   matched_output['qa'] = list(set(matched_output.get('qa',[]))) 
   
@@ -859,12 +859,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
                               create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                               if mood_type:
-                                matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'what is the mood of this picture?||{mood_type}')]))
+                                matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'What is the mood of this picture?||{mood_type}')]))
                               if random.random() <= prob_add_qa_image_type:
-                                if image_type== "": 
+                                if image_type== "" or  image_type=='picture': 
                                   image_type = "photo"
                                 if image_type is not None:
-                                  matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'what type of picture is this?||{image_type}')]))
+                                  matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('picture type', f'What type of picture is this?||{image_type}')]))
                               matched_output['tokens2'] = tokens.tostring()
                               matched_output['thumbnail2'] = np.array(img).tostring()
                               matched_output['score2'] = sim2
