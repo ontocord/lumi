@@ -435,7 +435,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
                 potential_qa_list.append((element, f"What is {element} for?||{answer}"))
                 entity_to_qa +=1
-        if random.randint(0,1) == 0 and prev_element:
+        if random.randint(0,1) == 0 and prev_element.lower() != element.lower():
           if random.randint(0,1) == 0:
             answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: where is {element} and {prev_element}?",  img)["text"]
             if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
