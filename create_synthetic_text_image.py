@@ -916,7 +916,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                 if box2element:
                                   for idx, vals in box2element.items():
                                     ci = box_images[idx]
-                                    print (vals)
+                                    print ('genbox', vals)
                                     if in_notebook: display(PIL.Image.fromarray(ci))
                                   print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2element'], '***', matched_output2.get('qa'))
                                   if in_notebook: display(img)  
