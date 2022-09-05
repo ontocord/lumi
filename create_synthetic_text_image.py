@@ -776,21 +776,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         l_lower = generated_sentence.lower()
                         if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
                         original_generated_sentence = generated_sentence
-                        #remove hallucinated text
-                        doc = spacy_nlp(generated_sentence)
-                        ents = list(set([e.text for e in doc.ents] + [e.text for e in doc.noun_chunks]))
-                        lower_matched_sent = (prev_text+". "+matched_output['matched_sentence']+". "+next_text).strip(" .").lower()
-                        ents.sort(key=lambda a: len(a), reverse=True)  
-                        for ent in ents:
-                          word = ent.lower()
-                          if len(word) > 4:
-                            word = word[:4]
-                          if word not in lower_matched_sent:
-                            if random.randint(0,3) == 0:
-                              generated_sentence = generated_sentence.replace(ent, "it")
-                            elif random.randint(0,3) == 0:
-                              generated_sentence = generated_sentence.replace(ent, "they")
-                        generated_sentence = generated_sentence.replace("  ", " ").replace(" it they ", " they ").replace(" they it ", " they ").replace(" it it ", " it ").replace(" it, it, ", "it, ").replace(" it are ", "they are").replace(" they is ", " it is ")   
+                        #common gen has some common halicunations
+                        if "teddy" or "teddy bear" in generated_sentence and "teddy" not in word_str:
+                          generated_sentence = generated_sentence.replace("teddy bear", "object").replace("teddy", "object")
+                        if "tuxedo" in generated_sentence and "tuxedo" not in word_str:
+                          generated_sentence = generated_sentence.replace("tuxedo", "clothes")
                         if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
                             generated_sentence = generated_sentence.split(",")
                             for i in range(len(generated_sentence)):
