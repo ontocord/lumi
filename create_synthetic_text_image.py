@@ -789,7 +789,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               else:
                                   generated_sentence[i] = generated_sentence[i]+","
                             generated_sentence = "".join(generated_sentence)
-                        #augment the sentence with fake data    
+                        #augment the sentence with fake data
+                        generated_sentence = generated_sentence.replace("a drawing of", "").replace("a picture of", "").replace("a photo of", "").replace("a photograph of", "").replace("a diagram of", "").replace("  ", " ").strip()
                         generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                         generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
                         print ('potential generated text:', generated_sentence, '***', original_generated_sentence)
