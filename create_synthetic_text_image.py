@@ -546,6 +546,10 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
     for element, score in box2score.items():
       if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is in this picture?||{element}")] 
+    ents = [a[1].split("||")[-1] for a in matched_output.get('qa',[])]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output.get('qa',[])]))
+    for element, score in ent2score.items():
+      if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
+         matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is related to this picture?||{element}")] 
                   
   matched_output['qa'] = list(set(matched_output.get('qa',[]))) 
   
