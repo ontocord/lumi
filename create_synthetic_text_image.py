@@ -833,7 +833,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         tokens.dtype = np.int16
                         clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
                         if not clip_output: print ('no clip_output for fake data')
-                        elif  clip_output['scores'][0] >= score_cutoff: 
+                        elif  clip_output['scores'][0] < score_cutoff: 
                           print ('score for fake data too low')
                           display(img)
                         if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
