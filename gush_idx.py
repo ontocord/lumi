@@ -45,7 +45,7 @@ def _unpickle(state):
     """
     tell  = state.pop('tell')
     index = state.pop('index')
-    gzobj = IndexedGzipFileExt(**state)
+    gzobj = GushFile(**state)
 
     if index is not None:
         gzobj.import_index(fileobj=io.BytesIO(index))
@@ -127,7 +127,7 @@ class GushFile(igzip.IndexedGzipFile):
           need_export_index = False
         self.line2seekpoint  = kwargs.pop('line2seekpoint', None)
         if need_export_index and 'auto_build' not in kwargs: kwargs['auto_build'] = True
-        super(IndexedGzipFileExt, self).__init__(*args, **kwargs)
+        super(GushFile, self).__init__(*args, **kwargs)
         if not hasattr(self, 'file_size'):
           self.build_full_index()
           pos = self.tell()
