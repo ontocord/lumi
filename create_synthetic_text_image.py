@@ -550,7 +550,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
       
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.20, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -902,7 +902,7 @@ if __name__ == "__main__":
     parser.add_argument('-input_en_txt_gz_file', dest='input_en_txt_gz_file', type=str, help='Input english text file, in .gz format')
     parser.add_argument('-max_items', dest='max_items', type=int, help='Maximum items to create', default=10000)
     parser.add_argument('-max_img_per_doc', dest='max_img_per_doc', type=int, help='Maximum images to create from one document', default=5)
-    parser.add_argument('-score_cutoff', dest='score_cutoff', type=float, help='Cutoff score for image/text matching using CLIP. Usually around .23-.20', default=.2)
+    parser.add_argument('-score_cutoff', dest='score_cutoff', type=float, help='Cutoff score for image/text matching using CLIP. Usually around .23-.20', default=.21)
     parser.add_argument('-trimmed_text_word_len', dest='trimmed_text_word_len', type=int, help='The approximate number of words per sentence used to generate images', default=50)
     parser.add_argument('-pytorch_device', dest='pytorch_device', type=str, help='the device', default= "cuda")
     parser.add_argument('-verbose', dest='verbose', type=int, help='verbse mode', default= 0)
