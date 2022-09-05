@@ -783,8 +783,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         ents.sort(key=lambda a: len(a), reverse=True)  
                         for ent in ents:
                           word = ent.lower()
-                          if len(word) > 5:
-                            word = word[:5]
+                          if len(word) > 4:
+                            word = word[:4]
                           if word not in lower_matched_sent:
                             if random.randint(0,3) == 0:
                               generated_sentence = generated_sentence.replace(ent, "it")
