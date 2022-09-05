@@ -614,7 +614,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           l = l.replace(" he ", " she ").replace(" him ", " her ").replace(" himself ", " herself ").replace(" his ", " her ").replace(" He ", " She ").replace(" Him ", " Her ").replace(" His ", " Her ").replace(" Himself ", " Herself ")
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
-        l = l.replace("Huwoman", "Human").replace("huwoman", "human").replace("wo wom", "wom") #german, etc. needs to be fixed too.
+        l = l.replace("Huwoman", "Human").replace("huwoman", "human").replace("Gerwoman", "German").replace("gerwoman", "german").replace("wo wom", "wom") #german, etc. needs to be fixed too.
         
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         other_person_list.append(person)
@@ -624,6 +624,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         l = l.replace("  ", " ").replace("  ", " ").replace("  ", " ")
         l = l.replace("the the", "the").replace("The the", "The").replace("Dr. the", "the").replace("Mr. the", "the").replace("Mrs. the", "the").replace("Miss. the", "the").replace("Ms. the", "the")
         l = l.replace("Dr the", "the").replace("Mr the", "the").replace("Mrs the", "the").replace("Miss the", "the").replace("Ms the", "the")
+        l_lower = l.lower()
+        if " patent " in l_lower or " invention " in l_lower or " prior art " in l_lower:
+          genre = "patent"
+        elif " court " in l_lower or " lawyer " in l_lower or " plaintiff " in l_lower or " defendant " in l_lower or " attorney " in l_lower:
+          genre = "legal"
+        elif " genetic " in l_lower or " gene " in l_lower or " diagnosis " in l_lower " anatomy " in l_lower " cell " in l_lower:
+          genre = "scientific"  
+        else:
+          genre = ""
         #print (l)
         #l = l.split()
         orig_l = l
@@ -800,10 +809,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         #print ('potential generated text:', generated_sentence, '***', original_generated_sentence)
                         aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
                         qa_list_gen = qa_list_gen + qa_list
-
-                        if any(a for a in emotion_adj if a in generated_sentence):
-                          mood_type = ""
-                        else:
+                        mood_or_genre_type = genre
+                        if not mood_or_genre_type and not any(a for a in emotion_adj if a in generated_sentence):
                           mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
                         image_type = random.choice(["", "",  "", "", "",  "",] + image_type_lst)
                         if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
@@ -812,12 +819,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           prob_add_qa_image_type = 1.0
 
                         prefix = ""
-                        if mood_type and not image_type:
-                          prefix =  mood_type + " picture of:" 
-                        elif not mood_type and image_type:
+                        if mood_or_genre_type and not image_type:
+                          prefix =  mood_or_genre_type + " picture of:" 
+                        elif not mood_or_genre_type and image_type:
                           prefix = image_type +" of:"
-                        elif mood_type and image_type:
-                          prefix = mood_type + " " + image_type +" of:"
+                        elif mood_or_genre_type and image_type:
+                          prefix = mood_or_genre_type + " " + image_type +" of:"
                         #generate an image 
                         tokens, img = minidalle.generate(prefix + " " + generated_sentence  if prefix else generated_sentence, image_output=True, token_output=True)
                         img = img.resize((100,100))
@@ -871,15 +878,15 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
                             matched_prefix.sort(key=lambda a: len(a), reverse=True)
                             if not matched_prefix:
-                              prefix = mood_type = image_type = None
+                              prefix = mood_or_genre_type = image_type = None
                             else:
                               matched_prefix = matched_prefix[0]
                               matched_prefix = matched_prefix.split()
                               if len(matched_prefix) == 1:
-                                mood_type = None
+                                mood_or_genre_type = None
                                 image_type = matched_prefix[0]
                               else:
-                                mood_type = matched_prefix[0]
+                                mood_or_genre_type = matched_prefix[0]
                                 image_type = matched_prefix[1]
                             #if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
                             #if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
@@ -891,8 +898,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
                               #print ('3')
                               create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
-                              if mood_type:
-                                matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'What is the mood of this picture?||{mood_type}')]))
+                              if mood_or_genre_type:
+                                if mood_or_genre_type not in mood_lst_set:
+                                  matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('genre type', f'What is the genre of this picture?||{mood_or_genre_type}')]))
+                                else:
+                                  matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'What is the mood of this picture?||{mood_or_genre_type}')]))
+
                               if random.random() <= prob_add_qa_image_type:
                                 if image_type== "" or  image_type=='picture': 
                                   image_type = "photo"
