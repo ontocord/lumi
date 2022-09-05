@@ -773,13 +773,20 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                         if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                         generated_sentence = generated_sentence.strip()
-                        #common gen has some common halicunations
-                        if "teddy" or "teddy bear" in generated_sentence and "teddy" not in word_str:
-                          generated_sentence = generated_sentence.replace("teddy bear", "object").replace("teddy", "object")
-                        if "tuxedo" in generated_sentence and "tuxedo" not in word_str:
-                          generated_sentence = generated_sentence.replace("tuxedo", "clothes")
                         l_lower = generated_sentence.lower()
                         if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
+                        #remove hallucinated text
+                        doc = spacy_nlp(generated_sentence)
+                        ents = list(set([e.text for e in doc.ents] + [e.text for e in doc.noun_chunks]))
+                        lower_matched_sent = (prev_text+". "+matched_output['matched_sentence']+". "+next_text).strip(" .").lower()
+                        ents.sort(key=lambda a: len(a), reverse=True)  
+                        for ent in ents:
+                          word = ent.lower()
+                          if len(word) > 5:
+                            word = word[:5]
+                          if word not in lower_matched_sent:
+                            generated_sentence = generated_sentence.replace(ent, " it ")
+                        generated_sentence = generated_sentence.replace("  ", " ").replace(" it it ", " it ")    
                         if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
                             generated_sentence = generated_sentence.split(",")
                             for i in range(len(generated_sentence)):
@@ -787,9 +794,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                   generated_sentence[i] = generated_sentence[i]+"."
                               else:
                                   generated_sentence[i] = generated_sentence[i]+","
-
                             generated_sentence = "".join(generated_sentence)
-
                         #augment the sentence with fake data    
                         generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                         generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
