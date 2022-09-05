@@ -775,7 +775,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         generated_sentence = generated_sentence.strip()
                         l_lower = generated_sentence.lower()
                         if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
-                        orig_generated = generated_sentence
+                        original_generated_sentence = generated_sentence
                         #remove hallucinated text
                         doc = spacy_nlp(generated_sentence)
                         ents = list(set([e.text for e in doc.ents] + [e.text for e in doc.noun_chunks]))
