@@ -802,11 +802,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           mood_type = random.choice(["", "",  "", "", "",  "", ] + mood_lst)
                         image_type = random.choice(["", "",  "", "", "",  "",] + image_type_lst)
                         if not ("rendering" in image_type or "art" in image_type or "cartoon" in image_type or "illustration" in image_type or "drawing" in image_type or "sketch" in image_type):
-                          mult = 1.0
                           prob_add_qa_image_type = 0.5
                         else:
-                          #drawings can be more unrealistic so we want a higher match, and we don't further augment the sentence to improve the match
-                          mult = high_score_mult
                           prob_add_qa_image_type = 1.0
 
                         prefix = ""
@@ -822,11 +819,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         tokens = tokens.cpu().numpy()
                         tokens.dtype = np.int16
                         clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
-                        if not clip_output: print ('no clip_output for fake data')
+                        if clip_output is None: print ('no clip_output for fake data')
                         elif  clip_output['scores'][0] < score_cutoff: 
                           print ('score for fake data too low',  clip_output['scores'][0] )
                           display(img)
                         if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
+                          print ('1')
                           sim2 = clip_output['scores'][0].item()
                           # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                           generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
@@ -859,25 +857,25 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             print ('fake data is distractor')
                             display(img)
                           if matched_output2['score'] < score_cutoff:
-                            print ('fake data score too low', matched_output2['score'])
+                            print ('fake data second score too low', matched_output2['score'])
                             display(img)
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
                               matched_output2['score'] >= score_cutoff:
-                            if  matched_output2['decomposed2element']:
-                                  matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
-                                  matched_prefix.sort(key=lambda a: len(a), reverse=True)
-                                  if not matched_prefix:
-                                    prefix = mood_type = image_type = None
-                                  else:
-                                    matched_prefix = matched_prefix[0]
-                                    matched_prefix = matched_prefix.split()
-                                    if len(matched_prefix) == 1:
-                                      mood_type = None
-                                      image_type = matched_prefix[0]
-                                    else:
-                                      mood_type = matched_prefix[0]
-                                      image_type = matched_prefix[1]
+                            print ('2')
+                            matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
+                            matched_prefix.sort(key=lambda a: len(a), reverse=True)
+                            if not matched_prefix:
+                              prefix = mood_type = image_type = None
+                            else:
+                              matched_prefix = matched_prefix[0]
+                              matched_prefix = matched_prefix.split()
+                              if len(matched_prefix) == 1:
+                                mood_type = None
+                                image_type = matched_prefix[0]
+                               else:
+                                mood_type = matched_prefix[0]
+                                image_type = matched_prefix[1]
                             #if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
                             #if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
                             if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
@@ -886,6 +884,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               print ('no decomposed high value for fake data')
                               display(img)
                             if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
+                              print ('3')
                               create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                               if mood_type:
                                 matched_output2['qa'] = list(set(matched_output2.get('qa',[]) + [('mood type', f'What is the mood of this picture?||{mood_type}')]))
@@ -912,8 +911,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                                     ci = box_images[idx]
                                     print ('genbox', vals)
                                     if in_notebook: display(PIL.Image.fromarray(ci))
-                                  print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2element'], '***', matched_output2.get('qa'))
-                                  if in_notebook: display(img)  
+                                print ('generated:', matched_output2['score'], '***', prefix, '***', matched_output2['matched_sentence'],  '***', aug2ent_gen, '***', matched_output2['decomposed2element'], '***', matched_output2.get('qa'))
+                                if in_notebook: display(img)  
                     dat_cnt += 1
                     out.write(str(matched_output)+"\n")
                     
