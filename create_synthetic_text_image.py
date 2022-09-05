@@ -783,6 +783,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           generated_sentence = generated_sentence.replace("tuxedo", "clothes")
                         if "tv show" in generated_sentence and "tv show" not in word_str:
                           generated_sentence = generated_sentence.replace("tv show", "event")
+                        if " lion " in generated_sentence and "lion" not in word_str:
+                          generated_sentence = generated_sentence.replace(" lion", " animal")
                         if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
                             generated_sentence = generated_sentence.split(",")
                             for i in range(len(generated_sentence)):
