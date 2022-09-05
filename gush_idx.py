@@ -19,6 +19,8 @@ import threading
 import io
 import os
 import copy
+from whoosh.index import create_in
+from whoosh.fields import *
 
 def _is_contiguous(arr):
         start = None
@@ -51,9 +53,9 @@ def _unpickle(state):
 
     return gzobj
 
-class IndexedGzipFileExt(igzip.IndexedGzipFile):
+class GushFile(igzip.IndexedGzipFile):
     """This class inheriets from `` ingdex_gzip.IndexedGzipFile``. This class allows in addition to the functionality 
-    of IndexedGzipFile, access to a specific line based on the seek point of the line, using the __getitem__ method.
+    of IndexedGzipFile, indexing each line using whoosh, and access to a specific line based on the seek point of the line, using the __getitem__ method.
 
     Additionally, a (conginguous) list or slice can be used, which will be more efficient then doing line by line access. 
     
@@ -109,12 +111,16 @@ class IndexedGzipFileExt(igzip.IndexedGzipFile):
         f = kwargs.get("filename") 
         if args and not f:
           f = args[0]
+        assert f, "no filename"
         need_export_index = False
         if f:
           if not os.path.exists(f+"idx"):
             need_export_index = True
+            os.makedirs(f+"idx")
+          if not os.path.exists(f+"idx/index.pickle"):
+            need_export_index = True
           else:
-            kwargs['index_file'] = kwargs.pop('index_file', f+"idx")
+            kwargs['index_file'] = kwargs.pop('index_file', f+"idx/index.pickle")
         if 'file_size' in kwargs:
           file_size = self.file_size = kwargs.pop('file_size', None)
           need_export_index = False
@@ -151,8 +157,17 @@ class IndexedGzipFileExt(igzip.IndexedGzipFile):
               worker.join()
             self.line2seekpoint = [0]+list(itertools.chain(*line_nums))
         if f and need_export_index: 
-          self.export_index(f+"idx")
-
+          self.export_index(f+"idx/index.pickle")
+          schema = Schema(id=ID(stored=True), content=TEXT)
+          #TODO determine how to clear out the whoosh index besides rm -rf _M* MAIN*
+          ix = create_in(f+"idx"), schema)
+          writer = ix.writer()
+          for idx, l in enumerate(self):
+            writer.add_document(id=str(id),
+                                content=l.decode().strip())  
+          writer.commit()
+          self.seek(0, os.SEEK_END)
+        
     def __reduce__(self):
         """Used to pickle an ``LineIndexGzipFile``.
         Returns a tuple containing:
