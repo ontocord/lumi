@@ -834,7 +834,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
                         if not clip_output: print ('no clip_output for fake data')
                         elif  clip_output['scores'][0] < score_cutoff: 
-                          print ('score for fake data too low')
+                          print ('score for fake data too low',  clip_output['scores'][0] )
                           display(img)
                         if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
                           sim2 = clip_output['scores'][0].item()
@@ -870,9 +870,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             display(img)
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
-                              matched_output2['score'] >= mult*score_cutoff and \
-                              (not matched_output['box2element'] or any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)) and \
+                              matched_output2['score'] >= score_cutoff:
+                            if (not matched_output['box2element'] or any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)) and \
                               len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
+                              print ('fake data might be not precise')
+                              display(img)
                             if  matched_output2['decomposed2element']:
                                   matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
                                   matched_prefix.sort(key=lambda a: len(a), reverse=True)
