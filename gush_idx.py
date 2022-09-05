@@ -21,7 +21,8 @@ import os
 import copy
 from whoosh.index import create_in
 from whoosh.fields import *
-
+from whoosh.qparser import QueryParser
+        
 def _is_contiguous(arr):
         start = None
         prev = None
@@ -156,18 +157,29 @@ class GushFile(igzip.IndexedGzipFile):
             for worker in workers:
               worker.join()
             self.line2seekpoint = [0]+list(itertools.chain(*line_nums))
+        schema = Schema(id=ID(stored=True), content=TEXT)
+        #TODO determine how to clear out the whoosh index besides rm -rf _M* MAIN*
+        self.whoosh_ix = create_in(f+"idx"), schema)  
         if f and need_export_index: 
           self.export_index(f+"idx/index.pickle")
-          schema = Schema(id=ID(stored=True), content=TEXT)
-          #TODO determine how to clear out the whoosh index besides rm -rf _M* MAIN*
-          ix = create_in(f+"idx"), schema)
-          writer = ix.writer()
+          writer = self.whoosh_ix.writer()
           for idx, l in enumerate(self):
             writer.add_document(id=str(id),
                                 content=l.decode().strip())  
           writer.commit()
           self.seek(0, os.SEEK_END)
-        
+    
+    def whoosh_searcher(self):
+        return self.whoosh_ix.searcher()
+
+    def search(self, query):
+        with self.whoosh_searcher()
+          if type(query) is str:
+             query = QueryParser("content", self.whoosh_ix.schema).parse(query)
+          results = searcher.search(query)
+          for r in results:
+               yield (int(r['id']), self[int(r['id'])].decode().strip())
+                
     def __reduce__(self):
         """Used to pickle an ``LineIndexGzipFile``.
         Returns a tuple containing:
