@@ -710,7 +710,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                 #let's do some cleanup of the ents since we injected more information then is in natural text
                 matched_sentence = simplify_aug(matched_sentence, aug2ent)
                 # create some distractor phrases
-                distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
+                distractors=([] if 'eye' in matched_sentence else ['a closeup of an eye']) + ([] if 'face' in matched_sentence else ['a closeup of a face']) + ([] if 'network' in matched_sentence else ['diagram of lines and networks']) + ([] if ' telling time ' in matched_sentence else ['telling time']) + ([] if ' clock ' in matched_sentence else ['clock']) + ([] if 'abstract' in matched_sentence else ['abstract art'])
                 # infer implied entities based on the image
                 potential_qa_list = create_potential_qa(matched_sentence, img,  aug2ent, prev_text=prev_text, next_text=next_text)
                 potential_qa_list = list(set(potential_qa_list + qa_list))
@@ -829,7 +829,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           sim2 = clip_output['scores'][0].item()
                           # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
                           generated_sentence = simplify_aug(generated_sentence, aug2ent_gen)
-                          distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
+                          distractors=([] if 'eye' in generated_sentence else ['a closeup of an eye']) + ([] if 'face' in generated_sentence else ['a closeup of a face']) + ([] if 'network' in generated_sentence else ['diagram of lines and networks']) + ([] if ' telling time ' in generated_sentence else ['telling time']) + ([] if 'clock' in generated_sentence else ['clock']) + ([] if 'abstract' in generated_sentence else ['abstract art'])
                           potential_qa_list = create_potential_qa(generated_sentence, img,  aug2ent_gen) + qa_list_gen
                           implied_entities = [a[1].split("||")[1].strip() for a in potential_qa_list] +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in potential_qa_list]))
                           implied_entities = [a for a in implied_entities if a not in generated_sentence and a not in color_adj_set and a not in common_vlt5_words]
