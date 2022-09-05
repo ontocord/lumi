@@ -832,6 +832,8 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         tokens = tokens.cpu().numpy()
                         tokens.dtype = np.int16
                         clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, [generated_sentence])
+                        if not clip_output: print ('no clip_output for fake data')
+                        elif  clip_output['scores'][0] >= score_cutoff: print ('score for fake data too low')
                         if clip_output is not None and clip_output['scores'][0] >= score_cutoff:
                           sim2 = clip_output['scores'][0].item()
                           # we only use the fake data to generate the image. the text2img matching uses the simplified sentence.
@@ -861,6 +863,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if matched_output2:
                               matched_output2['score'] = sim2
                           distractor_is_best_match = matched_output2 and matched_output2['decomposed2element'] and any(a for a in matched_output2['decomposed2element'].values() if a[0] in distractors and a[1] >= score_cutoff*high_score_mult)                                   
+                          if distractor_is_best_match: print ('fake data is distractor')
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
                               matched_output2['score'] >= mult*score_cutoff and \
