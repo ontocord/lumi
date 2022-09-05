@@ -632,7 +632,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           genre = "legal"
         elif " genetic " in l_lower or " gene " in l_lower or " anatomy " in l_lower or " cell " in l_lower:
           genre = "scientific"  
-        elif " clinical " in l_lower or " diagnosis " in l_lower:
+        elif " clinical " in l_lower or " diagnosis " in l_lower or " surgery " in l_lower:
           genre = "medical"  
         else:
           genre = ""
