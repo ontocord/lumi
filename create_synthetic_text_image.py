@@ -775,6 +775,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         generated_sentence = generated_sentence.strip()
                         l_lower = generated_sentence.lower()
                         if l_lower.count(" sex ") + l_lower.count(" fuck ") + l_lower.count(" cock ") + l_lower.count(" pussy ") + l_lower.count(" xxx ") > 1: continue  
+                        orig_generated = generated_sentence
                         #remove hallucinated text
                         doc = spacy_nlp(generated_sentence)
                         ents = list(set([e.text for e in doc.ents] + [e.text for e in doc.noun_chunks]))
@@ -801,7 +802,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         #augment the sentence with fake data    
                         generated_sentence, aug2ent_gen, qa_list_gen  = augment_ents(generated_sentence, do_person=False, do_loc=True, do_obj=True, other_person_list=other_person_list)
                         generated_sentence = re_augment(generated_sentence, aug2ent) # put back in the augmented data from the original sentence
-                        print ('potential generated text:', generated_sentence)
+                        print ('potential generated text:', original_generated_sentence, '***', original_generated_sentence)
                         aug2ent_gen = dict(list(aug2ent_gen.items()) + list(aug2ent.items()))
                         qa_list_gen = qa_list_gen + qa_list
 
