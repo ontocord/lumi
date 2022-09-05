@@ -111,11 +111,15 @@ def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
     commongen_tokenizer = AutoTokenizer.from_pretrained("mrm8488/t5-base-finetuned-common_gen")
     commongen_model = AutoModelWithLMHead.from_pretrained("mrm8488/t5-base-finetuned-common_gen").eval().half().to(device)
 
-
+    #copy over the gzip file and index file
     if not os.path.exists("./en.txt.gz"):
       print (en_txt_gz_file)
       os.system(f"cp {en_txt_gz_file} ./en.txt.gz")
-    IndexedGzipFileExt("en.txt.gz") 
+      os.system(f"cp -rf {en_txt_gz_file}idx ./en.txt.gzidx")
+    GushFile("en.txt.gz")
+    if not.os.path.exists(f"{en_txt_gz_file}idx"):
+      os.system(f"cp -rf ./en.txt.gzidx {en_txt_gz_file}idx ")
+      
 
 def aug_obj(obj_str):
   obj =  " " +random.choice(["", "", "", "", "", "", "", "", ]+color_adj) + " " + obj_str
@@ -563,7 +567,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
-   with IndexedGzipFileExt("en.txt.gz") as f:
+   with GushFile("en.txt.gz") as f:
       for cnt in tqdm.tqdm(range(max_items)):
         j = random.randint(0, len(f)-1)
         l = f[j]
