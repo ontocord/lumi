@@ -873,7 +873,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                               if len(matched_prefix) == 1:
                                 mood_type = None
                                 image_type = matched_prefix[0]
-                               else:
+                              else:
                                 mood_type = matched_prefix[0]
                                 image_type = matched_prefix[1]
                             #if matched_output2['decomposed2element']: print([(a, b) for a,b in matched_output2['decomposed2element'].items() if (b[0] in implied_entities)])
