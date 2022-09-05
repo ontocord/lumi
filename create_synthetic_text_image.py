@@ -72,7 +72,7 @@ political_affiliation_lst = ["conservative", "liberal", "moderate"]
 all_aug_words.extend(political_affiliation_lst)
 political_affiliation_lst_set = set(political_affiliation_lst)
 
-common_vlt5_words = ("true", "false", "yes", "no", "background", "foreground", "left", "right", "above", "below", "center", "middle", "in front", "behind", "nothing", "nowhere", "unknown", "black", "white", "more", "less", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )
+common_vlt5_words = ("true", "false", "yes", "no", "background", "foreground", "left", "right", "above", "below", "top", "bottom", "center", "middle", "in front", "behind", "nothing", "nowhere", "unknown", "black", "white", "more", "less", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" )
 all_aug_words.extend(common_vlt5_words)
 mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyllic", \
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
@@ -394,7 +394,7 @@ def create_potential_qa(text, img,  aug2ent,  prev_text="", next_text="",):
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               potential_qa_list.append((element, f"What color is {element}?||{answer}"))
               entity_to_qa +=1
-        if element.lower() == element and len(element) <= 5:
+        if element.lower() == element and len(element) <= 7:
           answer = vlt5_image2text(vlt5, vlt5_tokenizer, f"vqa: how many {element} are in this picture?",  img)["text"]
           if answer not in ("true", "false", "yes", "no") and (random.randint(0,2)==0 or answer not in common_vlt5_words): 
               if answer in ("1", "0"): answer = f"one {element}"
