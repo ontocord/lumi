@@ -78,6 +78,7 @@ mood_lst = ["cheerful", "reflective", "gloomy", "humorous", "melancholy", "idyll
                       "whimsical", "romantic", "mysterious", "ominous", "calm", "lighthearted", \
                       "hopeful", "angry", "fearful", "tense", "lonely"]
 all_aug_words.extend(mood_lst)
+mood_lst_set = set(mood_lst)
 image_type_lst = ["rendering", "vector-art ", "scene", "movie-still", \
                       "textbook-illustration", "realistic-drawing", "sketch", "cartoon", "painting", "diagram"]
 all_aug_words.extend(image_type_lst)                      
