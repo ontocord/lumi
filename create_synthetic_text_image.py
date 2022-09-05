@@ -537,9 +537,13 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
           if answer in common_vlt5_words or answer in color_adj_set or ent2score.get(answer,0) >= score_cutoff:
               matched_output['qa'] = matched_output.get('qa',[]) +  [(entity, question)]
     
-    # add qa for any other entities
+    box2score = {}    
+    if box2element:
+      for element, score, coord in box2element.values():
+        box2score[element] = max(box2score.get(element, 0), score)
+        # add qa for any other entities
     ents = [a[1].split("||")[-1] for a in matched_output.get('qa',[])]  +  list(itertools.chain(*[[a[0]] if " and " not in a[0] else a[0].split(" and ") for a in matched_output.get('qa',[])]))
-    for element, score in ent2score.items():
+    for element, score in box2score.items():
       if element not in text and element not in ents and score >= score_cutoff and element not in all_aug_words:
          matched_output['qa'] = matched_output.get('qa',[]) +  [(element, f"What is in this picture?||{element}")] 
                   
