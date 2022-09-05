@@ -858,13 +858,12 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if distractor_is_best_match: 
                             print ('fake data is distractor')
                             display(img)
+                          if matched_output2['score'] < score_cutoff:
+                            print ('fake data score too low', matched_output2['score'])
+                            display(img)
                           if matched_output2 and not distractor_is_best_match and \
                               matched_output2['decomposed2element'] and \
                               matched_output2['score'] >= score_cutoff:
-                            if (not matched_output['box2element'] or any(a for a in matched_output['box2element'].values() if a[1] >= score_cutoff)) and \
-                              len([a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff]) >= (len(matched_output2['decomposed2element'])*.5):
-                              print ('fake data might be not precise')
-                              display(img)
                             if  matched_output2['decomposed2element']:
                                   matched_prefix = [a[0] for a in matched_output2['decomposed2element'].values() if a[0] in prefix_arr] 
                                   matched_prefix.sort(key=lambda a: len(a), reverse=True)
@@ -883,6 +882,9 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                             #if matched_output2['box2element']: print([(a, b) for a,b in matched_output2['box2element'].items() if (b[0] in implied_entities)])
                             if matched_output2['decomposed2element']: matched_output2['decomposed2element'] = dict([(a, b) for a,b in matched_output2['decomposed2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
                             if matched_output2['box2element']: matched_output2['box2element'] = dict([(a, b) for a,b in matched_output2['box2element'].items() if b[0] not in prefix_arr and b[0] not in distractors and not (b[0] in implied_entities and b[1] < score_cutoff*high_score_mult)])
+                            if not any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
+                              print ('no decomposed high value for fake data')
+                              display(img)
                             if any(a for a in matched_output2['decomposed2element'].values() if a[1] >= score_cutoff):
                               create_qa(matched_output2, img, score_cutoff, potential_qa_list=potential_qa_list)
                               if mood_type:
