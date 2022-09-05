@@ -614,7 +614,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
           l = l.replace(" he ", " she ").replace(" him ", " her ").replace(" himself ", " herself ").replace(" his ", " her ").replace(" He ", " She ").replace(" Him ", " Her ").replace(" His ", " Her ").replace(" Himself ", " Herself ")
         elif (" she " in l or " She " in l) and random.randint(0, 4) == 0:
           l = l.replace(" she ", " he ").replace(" her ", " him ").replace(" hers ", " his ").replace(" She ", " He ").replace(" Her ", " Him ").replace(" Hers ", " His ")
-        l = l.replace("Huwoman", "Human").replace("huwoman", "human") #german, etc. needs to be fixed too.
+        l = l.replace("Huwoman", "Human").replace("huwoman", "human").replace("wo wom", "wom") #german, etc. needs to be fixed too.
         
         person = aug_person(person_str="", is_male=" he " in l or " He " in l)
         other_person_list.append(person)
@@ -785,8 +785,11 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                           if len(word) > 5:
                             word = word[:5]
                           if word not in lower_matched_sent:
-                            generated_sentence = generated_sentence.replace(ent, " it ")
-                        generated_sentence = generated_sentence.replace("  ", " ").replace(" it it ", " it ").replace(" it , it , ", "it , ")    
+                            if random.randint(0,3) == 0:
+                              generated_sentence = generated_sentence.replace(ent, "it")
+                            elif random.randint(0,3) == 0:
+                              generated_sentence = generated_sentence.replace(ent, "they")
+                        generated_sentence = generated_sentence.replace("  ", " ").replace(" it they ", " they ").replace(" they it ", " they ").replace(" it it ", " it ").replace(" it, it, ", "it, ").replace(" it are ", "they are").replace(" they is ", " it is ")   
                         if "," in generated_sentence and generated_sentence.count(",") > len(generated_sentence.split())*.3: 
                             generated_sentence = generated_sentence.split(",")
                             for i in range(len(generated_sentence)):
