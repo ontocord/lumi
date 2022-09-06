@@ -117,10 +117,9 @@ def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
       os.system(f"cp {en_txt_gz_file} ./en.txt.gz")
       os.system(f"cp -rf {en_txt_gz_file}idx ./en.txt.gzidx")
     GushFile("en.txt.gz")
-    if not.os.path.exists(f"{en_txt_gz_file}idx"):
+    if not os.path.exists(f"{en_txt_gz_file}idx"):
       os.system(f"cp -rf ./en.txt.gzidx {en_txt_gz_file}idx ")
       
-
 def aug_obj(obj_str):
   obj =  " " +random.choice(["", "", "", "", "", "", "", "", ]+color_adj) + " " + obj_str
   obj =  obj.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ")
