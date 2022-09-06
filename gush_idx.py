@@ -57,7 +57,6 @@ def _unpickle(state):
 class GushFile(igzip.IndexedGzipFile):
     """This class inheriets from `` ingdex_gzip.IndexedGzipFile``. This class allows in addition to the functionality 
     of IndexedGzipFile, indexing each line using whoosh, and access to a specific line based on the seek point of the line, using the __getitem__ method.
-
     Additionally, a (conginguous) list or slice can be used, which will be more efficient then doing line by line access. 
     
     The base IndexedGzipFile class allows for fast random access of a gzip
@@ -79,6 +78,8 @@ class GushFile(igzip.IndexedGzipFile):
         .. note:: The ``auto_build`` behaviour only takes place on calls to
                   :meth:`seek`.
         :arg filename:         File name or open file handle.
+        :arg index_whoosh:     Whether to index the file using whoose for 
+                               BM25 searching
         :arg fileobj:          Open file handle.
         :arg mode:             Opening mode. Must be either ``'r'`` or ``'rb``.
         :arg auto_build:       If ``True`` (the default), the index is
@@ -112,7 +113,6 @@ class GushFile(igzip.IndexedGzipFile):
         f = kwargs.get("filename") 
         if args and not f:
           f = args[0]
-        assert f, "no filename"
         need_export_index = False
         if f:
           if not os.path.exists(f+"idx"):
@@ -157,23 +157,28 @@ class GushFile(igzip.IndexedGzipFile):
             for worker in workers:
               worker.join()
             self.line2seekpoint = [0]+list(itertools.chain(*line_nums))
-        schema = Schema(id=ID(stored=True), content=TEXT)
-        #TODO determine how to clear out the whoosh index besides rm -rf _M* MAIN*
-        self.whoosh_ix = create_in(f+"idx"), schema)  
         if f and need_export_index: 
-          self.export_index(f+"idx/index.pickle")
-          writer = self.whoosh_ix.writer()
-          for idx, l in enumerate(self):
-            writer.add_document(id=str(id),
-                                content=l.decode().strip())  
-          writer.commit()
-          self.seek(0, os.SEEK_END)
+            self.export_index(f+"idx/index.pickle")
+        if 'index_whoosh' in kwargs and kwargs['index_whoosh']:
+          assert f, "need a filename to store the whoosh index"
+          schema = Schema(id=ID(stored=True), content=TEXT)
+          #TODO determine how to clear out the whoosh index besides rm -rf _M* MAIN*
+          self.whoosh_ix = create_in(f+"idx", schema)  
+          if need_export_index: 
+            writer = self.whoosh_ix.writer()
+            for idx, l in enumerate(self):
+              writer.add_document(id=str(id),
+                                  content=l.decode().strip())  
+            writer.commit()
+            self.seek(0, os.SEEK_END)
     
     def whoosh_searcher(self):
+        assert hasattr(self, 'whoosh_ix'), "must be created with whoosh_index set"
         return self.whoosh_ix.searcher()
 
     def search(self, query):
-        with self.whoosh_searcher()
+        assert hasattr(self, 'whoosh_ix'), "must be created with whoosh_index set"
+        with self.whoosh_searcher():
           if type(query) is str:
              query = QueryParser("content", self.whoosh_ix.schema).parse(query)
           results = searcher.search(query)
