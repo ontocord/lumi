@@ -142,7 +142,7 @@ def aug_person(person_str="", is_male=True):
     person = norp + " " + person_str
   else:
     if is_male: 
-      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person", "male person", "person])
+      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person", "male person", "person"])
     else:
       person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "female person", "person"])
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person").replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person")
