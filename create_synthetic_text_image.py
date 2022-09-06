@@ -52,7 +52,7 @@ all_aug_words.extend(color_adj)
 color_adj_set = set(color_adj)
 #TODO improve this with more variety
 
-person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl",]
+person_lst = ["man", "guy", "boy", "dude", "person", "woman", "lady", "gal", "girl", "female person", "male person"]
 all_aug_words.extend(person_lst)
 person_lst_set = set(person_lst)
 age_adj_lst = ["young", "teen", "young-adult", "middle-aged", "old"]
@@ -142,9 +142,9 @@ def aug_person(person_str="", is_male=True):
     person = norp + " " + person_str
   else:
     if is_male: 
-      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person"])
+      person = "the " + norp + " " + random.choice(["man", "man", "man", "guy", "boy", "dude", "person", "male person", "person])
     else:
-      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "person"])
+      person = "the " +  norp + " " + random.choice(["woman", "woman", "woman", "lady", "gal", "girl", "female person", "person"])
   person =  person.replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("  ", " ").replace("old boy", "old person").replace("old girl", "old person").replace("middle-aged boy", "middle-aged person").replace("middle-aged girl", "middle-aged person")
   return person.strip()
 
@@ -170,25 +170,37 @@ def re_augment(sentence, all_aug):
 def augment_ents(l, do_person=True, do_loc=False, do_obj=False, simplify_person=True, prob_of_swap=.33, other_person_list=[]):
   global spacy_nlp
   def get_person_questions(aug_word, qa_list):
-      the_person =  " ".join(aug_word.split()[-2:])
-      if the_person not in person_lst_set: the_person = "person"
-      emotion = [a for a in aug_word.split() if a in emotion_adj_set]
+      aug_word_arr = aug_word.split()
+      the_person =  " ".join(aug_word_arr[-2:])                                                    
+      if the_person not in person_lst_set and aug_word_arr[-1] not in person_lst_set: the_person = "person"
+      emotion = [a for a in aug_word_arr if a in emotion_adj_set]
       if emotion: qa_list.append((the_person, f"What is {the_person} feeling?||{emotion[0]}"))
-      age = [a for a in aug_word.split() if a in age_adj_set]
+      age = [a for a in aug_word_arr if a in age_adj_set]
       if age: qa_list.append((the_person, f"How old is {the_person}?||{age[0]}"))
       the_person = the_person.split()[-1]
-      religion = [a for a in aug_word.split() if a in religion_lst_set]
+      religion = [a for a in aug_word_arr if a in religion_lst_set]
       if religion: qa_list.append((the_person, f"What religion is {the_person}?||{religion[0]}"))
-      race = [a for a in aug_word.split() if a in race_lst_set]
+      race = [a for a in aug_word_arr if a in race_lst_set]
       if race: qa_list.append((the_person, f"What race is {the_person}?||{race[0]}"))
-      if "person" not in the_person:
-        qa_list.append((the_person, f"What gender is the person?||{the_person}"))
+      gender = [a for a in aug_word_arr if a in person_lst_set and a != "person"]
+      if aug_word_arr[-1] not in person_lst_set and gender:
+        a_list.append((the_person, f"What gender is {aug_word_arr[-1]}?||{gender}"))
+      elif "person" not in the_person:
+        qa_list.append((the_person, f"What gender is the person?||{gender}"))
         
   qa_list = []
   aug2ent =  {}
   seen = {}
   doc = spacy_nlp(l)
   ents = [(e.text, e.label_) for e in doc.ents]
+  if "a judge" in l:
+    ents.append(("a judge", "PERSON"))
+  if "the judge" in l:
+    ents.append(("the judge", "PERSON"))
+  if "plaintiff" in l:
+    ents.append(("plaintiff", "PERSON"))
+  if "defendant" in l:
+    ents.append(("plaintiff", "defendant"))
   #TODO, use nltk.wordnet to see if the parent node is an obj vs. abstract.
   if do_obj: 
     ents += [(e.text, 'OBJ') for e in doc.noun_chunks if len(e.text) > 4 and len(e.text) < 8 and e.text.lower() not in stopwords_set] 
