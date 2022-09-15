@@ -574,7 +574,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
       
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65, genre=""):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -594,6 +594,7 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
         l = l.replace("The present invention relates to", "")
         l = l.replace("Description of the Prior Art", "")
         l = l.replace("Prior Art", "")
+        if l.startswith("stock "): l = l.replace("stock", "").strip()
         trimmed_text = l.lower().split()
         stopword_cnt = len([word for word in trimmed_text if word in stopwords_set ])
         shortword_cnt = len([word for word in trimmed_text if len(word) < 5])
@@ -965,12 +966,13 @@ if __name__ == "__main__":
     parser.add_argument('-verbose', dest='verbose', type=int, help='verbse mode', default= 0)
     parser.add_argument('-high_score_mult', dest='high_score_mult', type=float, help='multiple of score_cutff for implied data', default= 1.2)
     parser.add_argument('-box_add_factor', dest='box_add_factor', type=float, help='weight to add to text match score when determining text to box scores', default=0.65)
+    parser.add_argument('-genre', dest='genre', type=str, help='the genre of the pictures', default="")
     args = parser.parse_args()
     create_synthetic_text_image_data(output_append_to_file=args.output_append_to_file, \
                                      input_en_txt_gz_file=args.input_en_txt_gz_file, \
                                      max_items=args.max_items, \
                                      score_cutoff=args.score_cutoff, \
-                                     max_img_per_doc=args.max_img_per_doc, \
+                                     max_img_per_doc=args.max_img_per_doc, genre=genre, \
                                      trimmed_text_word_len=args.trimmed_text_word_len, box_add_factor=args.box_add_factor, \
                                      verbose=args.verbose, high_score_mult=args.high_score_mult, \
                                      pytorch_device=args.pytorch_device)
