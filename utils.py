@@ -93,6 +93,9 @@ from torch.nn.functional import cosine_similarity
 import json
 import tqdm
 import numpy
+from lumi.stopwords  import stopwords
+stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including", "comprising", "comprises"])
+    
 def load_json_like_from_str(s, **kwargs):
       if not s.strip(): return None
       ret = None
@@ -133,22 +136,31 @@ def get_vision_output(clip_model, clip_processor, image, cls_weight=.9, decompos
       clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
       return clip_vision_output
 
-     
-def clip_guided_image2text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, num_generated_sentences=4, max_length=20):
+def strip_left_stopwords(e_text):
+  e_text2 = []
+  add_rest = False
+  for et in e_text.split():
+      if add_rest or (et.lower() not in stopwords_set):
+        add_rest = True
+        e_text2.append(et)
+  return " ".join(e_text2)
+      
+
+def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, 
+                              num_words=4, num_generated_sentences=4, max_length=20, top_p=0.95,
+                              top_k=10, box_segmentation_model=None, image_preprocessor=None):
+  p = next(clip_model.parameters())
   out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True)
   out = [(a.item(), b) for a, b in zip(out['decomposed_scores'], text_array)]
   out.sort(key=lambda a: a[0], reverse=True)
-  out = [o[1] for o in out[:4]]
+  out = [o[1] for o in out[:num_words]]
   words = ", ".join(out)
   len_words = len(out)
   print (words)
   current_generated_sentences = ['<pad>'] * num_generated_sentences
   for mlength in range(num_generated_sentences, max(max_length, len_words*num_generated_sentences), num_generated_sentences):
-    input = commongen_tokenizer([words, ]*4, padding=True,  return_tensors="pt").to(device)
-
-
-    input['decoder_input_ids'] = commongen_tokenizer(current_generated_sentences, padding=True, return_tensors="pt", add_special_tokens=False).input_ids.to(device)
-    
+    input = commongen_tokenizer([words, ]*4, padding=True,  return_tensors="pt").to(p.device)
+    input['decoder_input_ids'] = commongen_tokenizer(current_generated_sentences, padding=True, return_tensors="pt", add_special_tokens=False).input_ids.to(p.device)
     out = commongen_model.generate(num_return_sequences=num_generated_sentences, 
                                     top_p=0.95,
                                     top_k=10, 
@@ -163,7 +175,7 @@ def clip_guided_image2text(clip_model, clip_processor, commongen_model, commonge
     print (out1)
   return [o[1] for o in out1]
  
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_box=None):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_box=None, box_segmentation_model=None, image_preprocessor=None):
   if ignore_from_box is None: ignore_from_box = {}
   p = next(clip_model.parameters())
   decomposed_image_features = None 
