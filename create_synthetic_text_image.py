@@ -272,7 +272,7 @@ def strip_left_stopwords(e_text):
   return " ".join(e_text2)
 
 #given a sentence, break the sentence up into elements (ner, verbs, etc.) and match against the img, in the aggregate as well as against boxes
-def get_element_to_img_for_aug(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
+def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer, box_segmentation_model, image_preprocessor
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
@@ -291,7 +291,11 @@ def get_element_to_img_for_aug(matched_sentence, img, ignore_from_box=[], other_
       text5.append(atext)
     text4 = text5 
   if text4:
-    clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor, get_box_images=True, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor)  
+    if get_box_images:
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor, num_boxes=num_boxes, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor)  
+    else:
+      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)
+      
     if clip_output is not None:
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
       #most_similar_idx = clip_output['scores'].sort().indices[-1]
