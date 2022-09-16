@@ -136,17 +136,23 @@ def get_vision_output(clip_model, clip_processor, image, cls_weight=.9, decompos
 
 #TODO, in the case where text_array is None, we can do a search for entities and verbs to create words  for the text_array
 #TODO, use a more sophisticated filter by box2element, scores, decomposed_scores, or some combination
-def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, 
-                              num_words_from_clip=4, num_words_per_step=4, num_return_sequences=4, max_length=20, top_p=0.95,
+def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array=None, 
+                              word_str="", num_words_from_clip=4, num_words_per_step=4, num_return_sequences=4, max_length=20, top_p=0.95,
                               top_k=10, num_boxes=5, box_segmentation_model=None, image_preprocessor=None, ):
   p = next(clip_model.parameters())
-  
-  out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True, num_boxes=num_boxes, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor,)
-  out = [(a.item(), b) for a, b in zip(out['decomposed_scores'], text_array)]
-  out.sort(key=lambda a: a[0], reverse=True)
-  out = [o[1] for o in out[:num_words_from_clip]]
-  words = ", ".join(out)
-  len_words = len(out)
+  assert text_array is not None or word_str, "Either the text_array must be set with candidate words, or the actual prompt to commongen must be passed as word_str"
+  if not text_array:
+   out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True, num_boxes=num_boxes, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor,)
+   out = [(a.item(), b) for a, b in zip(out['decomposed_scores'], text_array)]
+   out.sort(key=lambda a: a[0], reverse=True)
+   out = [o[1] for o in out[:num_words_from_clip]]
+   words = ", ".join(out)
+   len_words = len(out)
+  else:
+   out = [o.strip(", ") for o in word_str.split()]
+   words = ", ".join(out)
+   len_words = len(out)
+   
   #print (words)
   current_generated_sentences = ['<pad>'] * num_return_sequences
   for mlength in range(num_return_sequences, max(max_length, len_words*num_words_per_step), num_words_per_step):
@@ -159,7 +165,7 @@ def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commo
     text_array = commongen_tokenizer.batch_decode(out,skip_special_tokens=True)
     text_array = list(set(text_array))
     out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True)
-    out1 = [(a.item(), b) for a, b in zip(out['scores'], text_array)]
+    out1 = [(a.item(), b) for a, b in zip(out['scores'], text_array)] # we can use the box2element score here instead.
     out1.sort(key=lambda a: a[0], reverse=True)
     out1 = out1[:num_return_sequences]
     current_generated_sentences = ['<pad> '+ o[1] for o in out1]
