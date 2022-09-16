@@ -33,7 +33,7 @@ try:
   if minidalle is None:
     pass
 except:
-  minidalle = spacy_nlp = clip_model= clip_processor= stopwords_set= vlt5 = qg = box_segmentation_model = image_preprocessor None
+  minidalle = spacy_nlp = clip_model= clip_processor= stopwords_set= vlt5 = qg = box_segmentation_model = image_preprocessor = None
   device = 'cuda'
 
 all_aug_words = []
