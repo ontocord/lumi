@@ -107,7 +107,7 @@ def init_data(en_txt_gz_file, vlt5_data_file=None, pytorch_device = 'cuda'):
     vlt5_tokenizer = VLT5Tokenizer.from_pretrained("ontocord/vlt5")
     clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
     #vlt5_data = torch.load("/content/drive/Shareddrives/ontocord/vlt5_datasets/vlt5_data_0.pt")
-
+    box_segmentation_model, image_preprocessor = vlt5.frcnn, vlt5.image_preprocessor
     commongen_tokenizer = AutoTokenizer.from_pretrained("mrm8488/t5-base-finetuned-common_gen")
     commongen_model = AutoModelWithLMHead.from_pretrained("mrm8488/t5-base-finetuned-common_gen").eval().half().to(device)
 
@@ -271,8 +271,8 @@ def strip_left_stopwords(e_text):
   return " ".join(e_text2)
 
 #given a sentence, break the sentence up into elements (ner, verbs, etc.) and match against the img, in the aggregate as well as against boxes
-def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
-  global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
+def get_element_to_img_for_aug(matched_sentence, img, ignore_from_box=[], other_element_arr=[], get_box_images=False, num_boxes=5, box_add_factor=0.65, box_detect_verbs=False):
+  global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer, box_segmentation_model, image_preprocessor
   doc = spacy_nlp(matched_sentence)
   noun_chunks = [strip_left_stopwords(e.text) for e in doc.noun_chunks if len(e.text) > 4 and e.text.lower() not in stopwords_set]
   verbs = [strip_left_stopwords(e.text) for e in doc if len(e.text) > 4 and e.tag_.startswith('VB') and e.text.lower() not in stopwords_set] + \
@@ -290,13 +290,7 @@ def get_element_to_img(matched_sentence, img, ignore_from_box=[], other_element_
       text5.append(atext)
     text4 = text5 
   if text4:
-    if get_box_images:
-      normalized_boxes = decode_image(asarray(img), vlt5.frcnn,  vlt5.image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
-      
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)  
-    else:
-      clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor)  
-
+    clip_output = clip_image_to_multitext_score(clip_model, clip_processor, img, text4, decompose_image=True, normalized_boxes=normalized_boxes, ignore_from_box=([] if box_detect_verbs else verbs) + ignore_from_box, box_add_factor=box_add_factor, get_box_images=True, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor)  
     if clip_output is not None:
       #text2image_scores = dict([(text4[idx], clip_output['scores'][idx].item()) for idx in range(len(text4))]) 
       #most_similar_idx = clip_output['scores'].sort().indices[-1]
