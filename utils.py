@@ -112,6 +112,28 @@ def load_json_like_from_str(s, **kwargs):
              ret[key] = Image.fromarray(ret[key])
       return ret
 
+def get_vision_output(clip_model, clip_processor, image, cls_weight=.9, decompose_image=True):
+    p = next(clip_model.parameters())
+    decomposed_image_features = None 
+    if type(image) is np.array:
+        pil_image = PIL.Image.fromarray(image)
+    else:
+        pil_image = image
+        image = np.array(image)
+    imgs = [image] 
+    inputs = clip_processor(images=imgs, return_tensors="pt")
+    if True: # with torch.no_grad():
+      inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
+      inputs['return_dict'] = True
+      clip_vision_output = clip_model.vision_model(**inputs)
+      if decompose_image:
+        o = (clip_vision_output["last_hidden_state"][0,1:,:] + cls_weight*10*clip_vision_output["last_hidden_state"][0,0,:])/(cls_weight*10+1)
+        clip_vision_output.decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
+      # image_features[0] is the main picture, the rest are the box parts of the picture
+      clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
+      return clip_vision_output
+
+     
 def clip_guided_image2text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, num_generated_sentences=4, max_length=20):
   out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True)
   out = [(a.item(), b) for a, b in zip(out['decomposed_scores'], text_array)]
