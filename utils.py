@@ -93,9 +93,7 @@ from torch.nn.functional import cosine_similarity
 import json
 import tqdm
 import numpy
-from lumi.stopwords  import stopwords
-stopwords_set = set(list(itertools.chain(*list(stopwords.values()))) + ["include", "includes", "included", "including", "comprising", "comprises"])
-    
+
 def load_json_like_from_str(s, **kwargs):
       if not s.strip(): return None
       ret = None
@@ -136,48 +134,43 @@ def get_vision_output(clip_model, clip_processor, image, cls_weight=.9, decompos
       clip_vision_output.image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
       return clip_vision_output
 
-def strip_left_stopwords(e_text):
-  e_text2 = []
-  add_rest = False
-  for et in e_text.split():
-      if add_rest or (et.lower() not in stopwords_set):
-        add_rest = True
-        e_text2.append(et)
-  return " ".join(e_text2)
-      
 
 def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, 
-                              num_words=4, num_generated_sentences=4, max_length=20, top_p=0.95,
-                              top_k=10, box_segmentation_model=None, image_preprocessor=None):
+                              num_words_from_clip=4, num_words_per_step=4, num_return_sequences=4, max_length=20, top_p=0.95,
+                              top_k=10, num_boxes=5, box_segmentation_model=None, image_preprocessor=None, ):
   p = next(clip_model.parameters())
-  out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True)
+  
+  out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True, num_boxes=num_boxes, box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor,)
   out = [(a.item(), b) for a, b in zip(out['decomposed_scores'], text_array)]
   out.sort(key=lambda a: a[0], reverse=True)
-  out = [o[1] for o in out[:num_words]]
+  out = [o[1] for o in out[:num_words_from_clip]]
   words = ", ".join(out)
   len_words = len(out)
-  print (words)
-  current_generated_sentences = ['<pad>'] * num_generated_sentences
-  for mlength in range(num_generated_sentences, max(max_length, len_words*num_generated_sentences), num_generated_sentences):
-    input = commongen_tokenizer([words, ]*4, padding=True,  return_tensors="pt").to(p.device)
+  #print (words)
+  current_generated_sentences = ['<pad>'] * num_return_sequences
+  for mlength in range(num_return_sequences, max(max_length, len_words*num_words_per_step), num_words_per_step):
+    input = commongen_tokenizer([words]*num_return_sequences, padding=True,  return_tensors="pt").to(p.device)
     input['decoder_input_ids'] = commongen_tokenizer(current_generated_sentences, padding=True, return_tensors="pt", add_special_tokens=False).input_ids.to(p.device)
-    out = commongen_model.generate(num_return_sequences=num_generated_sentences, 
-                                    top_p=0.95,
-                                    top_k=10, 
+    out = commongen_model.generate(num_return_sequences=num_return_sequences, 
+                                    top_p=top_p,
+                                    top_k=top_k, 
                                     do_sample=True, max_length=mlength, **input)
     text_array = commongen_tokenizer.batch_decode(out,skip_special_tokens=True)
     text_array = list(set(text_array))
     out = clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, decompose_image=True)
     out1 = [(a.item(), b) for a, b in zip(out['scores'], text_array)]
     out1.sort(key=lambda a: a[0], reverse=True)
-    out1 = out1[:num_generated_sentences]
+    out1 = out1[:num_return_sequences]
     current_generated_sentences = ['<pad> '+ o[1] for o in out1]
-    print (out1)
+    #print (out1)
   return [o[1] for o in out1]
  
-def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_box=None, box_segmentation_model=None, image_preprocessor=None):
+def clip_image_to_multitext_score(clip_model, clip_processor, image, text_array, clip_vision_output=None, text_features=None, cls_weight=.9, box_add_factor=.65, decompose_image=False, normalized_boxes=None, ignore_from_box=None, num_boxes=5, box_segmentation_model=None, image_preprocessor=None):
   if ignore_from_box is None: ignore_from_box = {}
   p = next(clip_model.parameters())
+  if box_segmentation_model is not None:
+   normalized_boxes = decode_image(asarray(image), box_segmentation_model,  image_preprocessor, max_detections=num_boxes)["normalized_boxes"][0]
+  
   decomposed_image_features = None 
   if type(image) is np.array:
       pil_image = PIL.Image.fromarray(image)
