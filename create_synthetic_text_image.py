@@ -572,8 +572,8 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 #decomposed_image_features is shape=[1, 50, 512] dtype="float16"
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
-      
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65, genre=""):
+#TODO: add the genre passed into this function in the sentence prefix.      
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65, genre="", clip_guided_generate_sentence):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
@@ -789,15 +789,20 @@ def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file
                         if in_notebook: display(img)
                       dat_cnt += 1    
 
-                      #now let's create a different sentence based on the elements of the previous sentence, using words that have higher visual scores
+                      #now let's create a different sentence that can be used to generate a simialr image, 
+                      #based on the elements of the previous sentence, using words that have higher visual scores
                       new_words = [a[0] for a in  matched_output['decomposed2element'].values() if a[1] >= score_cutoff and a[0] in matched_sentence] 
                       word_str = ", ".join(new_words)
                       if word_str:
-                        generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
+                        if clip_guided_generate_sentence:
+                          generated_sentences = clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, word_str=word_str,
+                              box_segmentation_model=box_segmentation_model, image_preprocessor=image_preprocessor, max_length=len(word_str.split())*10)
+                        else:  
+                          generated_sentence = commongen_model.generate(commongen_tokenizer.encode(word_str, return_tensors="pt").to(device), 
                                                                       min_length=len(word_str.split())*3, 
                                                                       max_length=len(word_str.split())*10, 
                                                                       no_repeat_ngram_size=2)
-                        generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
+                          generated_sentence = commongen_tokenizer.decode(generated_sentence[0], skip_special_tokens=True).strip(". ")
                         if ".." in generated_sentence: generated_sentence, _ = generated_sentence.split("..", 1)
                         generated_sentence = generated_sentence.strip()
                         l_lower = generated_sentence.lower()
