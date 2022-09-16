@@ -135,6 +135,7 @@ def get_vision_output(clip_model, clip_processor, image, cls_weight=.9, decompos
       return clip_vision_output
 
 #TODO, in the case where text_array is None, we can do a search for entities and verbs to create words  for the text_array
+#TODO, use a more sophisticated filter by box2element, scores, decomposed_scores, or some combination
 def clip_guided_image_to_text(clip_model, clip_processor, commongen_model, commongen_tokenizer, image, text_array, 
                               num_words_from_clip=4, num_words_per_step=4, num_return_sequences=4, max_length=20, top_p=0.95,
                               top_k=10, num_boxes=5, box_segmentation_model=None, image_preprocessor=None, ):
