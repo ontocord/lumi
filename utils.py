@@ -41,6 +41,7 @@ import requests
 from filelock import FileLock
 from yaml import Loader, dump, load
 from torch.nn.functional import cosine_similarity
+from numpy import asarray
 
 try:
     import torch
