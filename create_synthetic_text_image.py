@@ -573,7 +573,7 @@ def create_qa(matched_output, img, score_cutoff, potential_qa_list=[]):
 #image is shape = [100,100,3], dtype="uint8"
 #tokens is [1, 1028] int16
 #TODO: add the genre passed into this function in the sentence prefix.      
-def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65, genre="", clip_guided_generate_sentence):
+def create_synthetic_text_image_data(output_append_to_file, input_en_txt_gz_file, max_items=10000, score_cutoff=0.21, max_img_per_doc=5, trimmed_text_word_len=50, verbose=False, pytorch_device='cuda', high_score_mult=1.2, box_add_factor=0.65, genre="", clip_guided_generate_sentence=False):
   global spacy_nlp, clip_model, clip_processor, minidalle, device, commongen_model, commongen_tokenizer
   init_data(input_en_txt_gz_file, pytorch_device=pytorch_device)
   with open(output_append_to_file, "a+") as out:
