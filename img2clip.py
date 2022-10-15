@@ -8,6 +8,7 @@ except:
   sys.path.append(os.path.abspath(os.path.join("./",
                                            os.path.pardir)))
 
+from riverbed.stopwords  import stopwords
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel, AutoModel, AutoTokenizer, AutoModelWithLMHead
 import torch
@@ -22,6 +23,9 @@ import torch
 import pandas as pd
 import numpy as np
 import time
+from img2dataset import download
+from multiprocessing import Process
+
 device = 'cuda'
 clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 clip_model = clip_model.half().eval().to(device)
@@ -57,21 +61,31 @@ def save_clip_batch(decomposed_image_features_mmap, image_features_mmap, imgs, i
     decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
     shape = list(decomposed_image_features.shape)
     shape[0] = mmap_len
-    np_memmap(decomposed_image_features_mmap, dat=decomposed_image_features, idxs=idxs, shape=shape)
+    np_memmap(decomposed_image_features_mmap, dat=decomposed_image_features.cpu().numpy(), idxs=idxs, shape=shape)
     image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
     shape = list(image_features.shape)
     shape[0] = mmap_len
-    np_memmap(image_features_mmap, dat=image_features, idxs=idxs, shape=shape)
+    np_memmap(image_features_mmap, dat=image_features.cpu().numpy(), idxs=idxs, shape=shape)
     return image_features, decomposed_image_features 
 
-def create_image2clip_data_mmaps(laion_df=None, shard_name=""):
+def img2clip_download(url_list, image_size):
+  download(url_list="./url.txt", image_size=image_size)
+
+def create_img2clip_data_mmaps(laion_df=None, image_size=100, shard_range=None):
   md5_hash ={}
   if laion_df is None:
     laion_df = pd.read_csv('./laion_subset_dedup.tsv.gz', sep='\t', header=None)
   text = laion_df[0].tolist()
   kw = laion_df[1].tolist()
   url = [url if url.startswith("http") and "," not in url else "" for url in laion_df[2].tolist()]
+  if shard_range is None:
+    shard_range = [0, len(shard_range)]
+  shard_name = str(shard_range[0])+"_"+str(shard_range[1])
+  open("./url.txt", "w").write("\n".join(url[shard_range[0]:shard_range[1]+1]))
   url2dat = dict([(str(u).strip(), [str(t).strip(), str(k).strip(), None]) for u, t, k in zip(url, text, kw)])
+  p = Process(target=img2clip_download, args=("./url.txt", image_size))
+  p.start()
+  time.sleep(10)
   all_files = []
   mmap_len = 1
   seen_files = {}
@@ -86,8 +100,13 @@ def create_image2clip_data_mmaps(laion_df=None, shard_name=""):
             if f in seen_files: continue
             seen_files[f] = 1
             all_files.append(f)
-      if not all_files: break
-      for f in tqdm.tqdm(all_files):
+      if not all_files: 
+        if p.is_alive(): 
+          time.sleep(10)
+          continue
+        else:
+          break
+      for f in all_files:
         file_dat = json.load(open(f))
         if file_dat["status"] == "success":
           url = file_dat["url"]
@@ -100,12 +119,15 @@ def create_image2clip_data_mmaps(laion_df=None, shard_name=""):
           dat2 = url2dat.get(url)
           if not dat2:
             print ('problem', url)
-          else:
+          else: 
+            try:
+              img = Image.open (f.replace(".json", ".jpg"))
+            except:
+              continue
             dat2[2] = 1
-            img = Image.open (f.replace(".json", ".jpg"))
             img_data =  np.array(img).flatten()
             np_memmap(f"./laion_subset_dedup2_images_{shard_name}.mmap", shape=[mmap_len, len(img_data)], idxs=[mmap_len-1], dat=img_data, dtype=img_data.dtype)
-            out.write(dat2[0]+"\t"+dat2[1]+"\n")
+            out.write(dat2[0]+"\t"+"" if dat2[1] == "nan" else dat2[1]+"\n")
             if len(batch) > 2000:
               ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
               batch = []
@@ -113,7 +135,8 @@ def create_image2clip_data_mmaps(laion_df=None, shard_name=""):
             batch.append(img)
             idxs.append(mmap_len-1)
             mmap_len += 1
-      if batch:
-        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
+        if batch:
+          ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
       time.sleep(10)
-              
+  p.join()
+
