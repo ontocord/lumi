@@ -8,7 +8,7 @@ except:
   sys.path.append(os.path.abspath(os.path.join("./",
                                            os.path.pardir)))
 
-from riverbed.stopwords  import stopwords
+from lumi.stopwords  import stopwords
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel, AutoModel, AutoTokenizer, AutoModelWithLMHead
 import torch
@@ -65,28 +65,29 @@ def save_clip_batch(decomposed_image_features_mmap, image_features_mmap, imgs, i
     np_memmap(image_features_mmap, dat=image_features, idxs=idxs, shape=shape)
     return image_features, decomposed_image_features 
 
-if __name__ == "__main__":
-
+def create_image2clip_data_mmaps(laion_df=None, shard_name=""):
   md5_hash ={}
-  dat = pd.read_csv('./laion_subset_dedup.tsv.gz', sep='\t', header=None)
-  text = dat[0].tolist()
-  kw = dat[1].tolist()
-  url = [url if url.startswith("http") and "," not in url else "" for url in dat[2].tolist()]
+  if laion_df is None:
+    laion_df = pd.read_csv('./laion_subset_dedup.tsv.gz', sep='\t', header=None)
+  text = laion_df[0].tolist()
+  kw = laion_df[1].tolist()
+  url = [url if url.startswith("http") and "," not in url else "" for url in laion_df[2].tolist()]
   url2dat = dict([(str(u).strip(), [str(t).strip(), str(k).strip(), None]) for u, t, k in zip(url, text, kw)])
   all_files = []
   mmap_len = 1
   seen_files = {}
   batch = []
-  with open("laion_subset_dedup2.tsv", "w", encoding="utf8") as out:
+  idxs = []
+  with open(f"./laion_subset_dedup_{shard_name}.tsv", "w", encoding="utf8") as out:
     while True:
       all_files = []
       for d in glob.glob("/content/images/*"):
         if os.path.isdir(d):
           for f in glob.glob(d+"/*.json"):
-            all_files.append(f)
             if f in seen_files: continue
             seen_files[f] = 1
-      if all_files: break
+            all_files.append(f)
+      if not all_files: break
       for f in tqdm.tqdm(all_files):
         file_dat = json.load(open(f))
         if file_dat["status"] == "success":
@@ -104,14 +105,16 @@ if __name__ == "__main__":
             dat2[2] = 1
             img = Image.open (f.replace(".json", ".jpg"))
             img_data =  np.array(img).flatten()
-            np_memmap("./laion_subset_dedup2_images.mmap", shape=[mmap_len, len(img_data)], idxs=[mmap_len-1], dat=img_data, dtype=img_data.dtype)
-            mmap_len += 1
+            np_memmap(f"./laion_subset_dedup2_images_{shard_name}.mmap", shape=[mmap_len, len(img_data)], idxs=[mmap_len-1], dat=img_data, dtype=img_data.dtype)
             out.write(dat2[0]+"\t"+dat2[1]+"\n")
             if len(batch) > 2000:
-              ret = save_clip_batch("./laion_clip.mmap", "./laion_decomposed_clip.mmap", batch, mmap_len, cls_weight=.9,)
+              ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
               batch = []
+              idxs=[]
             batch.append(img)
-      time.sleep(60)
+            idxs.append(mmap_len-1)
+            mmap_len += 1
       if batch:
-        ret = save_clip_batch("./laion_clip.mmap", "./laion_decomposed_clip.mmap", batch, mmap_len, cls_weight=.9,)
+        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
+      time.sleep(10)
               
