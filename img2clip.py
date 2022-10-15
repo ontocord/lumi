@@ -79,7 +79,8 @@ def create_img2clip_data_mmaps(laion_df=None, image_size=100, shard_range=None, 
   kw = laion_df[1].tolist()
   url = [url if url.startswith("http") and "," not in url else "" for url in laion_df[2].tolist()]
   if shard_range is None:
-    shard_range = [0, len(shard_range)]
+    shard_range = [0, len(url)]
+  shard_range[1] = min(len(url), shard_range[1])
   shard_name = str(shard_range[0])+"_"+str(shard_range[1])
   open("./url.txt", "w").write("\n".join(url[shard_range[0]:shard_range[1]+1]))
   url2dat = dict([(str(u).strip(), [str(t).strip(), str(k).strip(), None]) for u, t, k in zip(url, text, kw)])
