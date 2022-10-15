@@ -80,7 +80,7 @@ if __name__ == "__main__":
   with open("laion_subset_dedup2.tsv", "w", encoding="utf8") as out:
     while True:
       all_files = []
-      for d in glob.glob("./images/*"):
+      for d in glob.glob("/content/images/*"):
         if os.path.isdir(d):
           for f in glob.glob(d+"/*.json"):
             all_files.append(f)
