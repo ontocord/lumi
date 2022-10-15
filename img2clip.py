@@ -86,6 +86,7 @@ if __name__ == "__main__":
             all_files.append(f)
             if f in seen_files: continue
             seen_files[f] = 1
+      if all_files: break
       for f in tqdm.tqdm(all_files):
         file_dat = json.load(open(f))
         if file_dat["status"] == "success":
