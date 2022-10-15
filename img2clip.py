@@ -8,7 +8,6 @@ except:
   sys.path.append(os.path.abspath(os.path.join("./",
                                            os.path.pardir)))
 
-from lumi.stopwords  import stopwords
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel, AutoModel, AutoTokenizer, AutoModelWithLMHead
 import torch
