@@ -47,20 +47,22 @@ def np_memmap(filename, dat=None, idxs=None, shape=None, dtype=np.float16, offse
     memmap[idxs] = dat
   return memmap
 
-def save_clip_batch(filename, imgs, idxs, mmap_len, cls_weight=.9,):
+def save_clip_batch(decomposed_image_features_mmap, image_features_mmap, imgs, idxs, mmap_len, cls_weight=.9,):
   with torch.no_grad():
     p = next(clip_model.parameters())
     inputs = clip_processor(images=imgs, return_tensors="pt")
     inputs['pixel_values'] = inputs['pixel_values'].to(dtype=p.dtype, device=p.device)
     inputs['return_dict'] = True
     clip_vision_output = clip_model.vision_model(**inputs)
-    o = (clip_vision_output["last_hidden_state"][0,1:,:] + cls_weight*10*clip_vision_output["last_hidden_state"][0,0,:])/(cls_weight*10+1)
-    print ('A', o.shape)
+    o = (clip_vision_output["last_hidden_state"][:,1:,:] + cls_weight*10*clip_vision_output["last_hidden_state"][:,0,:].unsqueeze(1)/(cls_weight*10+1))    
     decomposed_image_features = clip_model.visual_projection(clip_model.vision_model.post_layernorm(o))
-    # image_features[0] is the main picture, the rest are the box parts of the picture
-    print ('B', decomposed_image_features.shape)
+    shape = list(decomposed_image_features.shape)
+    shape[0] = mmap_len
+    np_memmap(decomposed_image_features_mmap, dat=decomposed_image_features, idxs=idxs, shape=shape)
     image_features = clip_model.visual_projection(clip_vision_output["pooler_output"]) 
-    print (image_features.shape, decomposed_image_features.shape)
+    shape = list(image_features.shape)
+    shape[0] = mmap_len
+    np_memmap(image_features_mmap, dat=image_features, idxs=idxs, shape=shape)
     return image_features, decomposed_image_features 
 
 if __name__ == "__main__":
@@ -104,11 +106,11 @@ if __name__ == "__main__":
             np_memmap("./laion_subset_dedup2_images.mmap", shape=[mmap_len, len(img_data)], idxs=[mmap_len-1], dat=img_data, dtype=img_data.dtype)
             mmap_len += 1
             out.write(dat2[0]+"\t"+dat2[1]+"\n")
-            if len(batch) > 10:
-              ret = save_clip_batch(None, batch, None, None, cls_weight=.9,)
+            if len(batch) > 2000:
+              ret = save_clip_batch("./laion_clip.mmap", "./laion_decomposed_clip.mmap", batch, mmap_len, cls_weight=.9,)
               batch = []
             batch.append(img)
       time.sleep(60)
       if batch:
-        ret = save_clip_batch(None, batch, None, None, cls_weight=.9,)
+        ret = save_clip_batch("./laion_clip.mmap", "./laion_decomposed_clip.mmap", batch, mmap_len, cls_weight=.9,)
               
