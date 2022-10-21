@@ -93,7 +93,7 @@ def create_img2clip_data_mmaps(laion_df=None, image_size=100, shard_range=None, 
   #p.start()
   #time.sleep(10)
   all_files = []
-  mmap_len = 1
+  mmap_len = 0
   seen_files = {}
   batch = []
   idxs = []
@@ -132,16 +132,16 @@ def create_img2clip_data_mmaps(laion_df=None, image_size=100, shard_range=None, 
               continue
             dat2[2] = 1
             img_data =  np.array(img).flatten()
-            np_memmap(f"./laion_subset_dedup_images_{shard_name}.mmap", shape=[mmap_len, len(img_data)], idxs=[mmap_len-1], dat=img_data, dtype=img_data.dtype)
+            np_memmap(f"./laion_subset_dedup_images_{shard_name}.mmap", shape=[mmap_len+1, len(img_data)], idxs=[mmap_len], dat=img_data, dtype=img_data.dtype)
             out.write(dat2[0]+"\t"+("" if dat2[1] == "nan" else dat2[1])+"\n")
             if len(batch) > 500:
               ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
               batch = []
               idxs=[]
             batch.append(img)
-            idxs.append(mmap_len-1)
+            idxs.append(mmap_len)
             mmap_len += 1
       if batch:
-        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len-1, cls_weight=.9,)
+        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
       time.sleep(10)
   if download_images: p.join()
