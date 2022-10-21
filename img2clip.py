@@ -142,6 +142,6 @@ def create_img2clip_data_mmaps(laion_df=None, image_size=100, shard_range=None, 
             idxs.append(mmap_len-1)
             mmap_len += 1
       if batch:
-        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len, cls_weight=.9,)
+        ret = save_clip_batch(f"./laion_clip_{shard_name}.mmap", f"./laion_decomposed_clip_{shard_name}.mmap", imgs=batch, idxs=idxs, mmap_len=mmap_len-1, cls_weight=.9,)
       time.sleep(10)
   if download_images: p.join()
